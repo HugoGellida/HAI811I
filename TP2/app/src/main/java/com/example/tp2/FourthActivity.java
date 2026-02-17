@@ -1,16 +1,25 @@
 package com.example.tp2;
 
-import android.content.Intent;
-import android.hardware.Sensor;
-import android.hardware.SensorManager;
-import android.os.Bundle;
+import static java.lang.Math.abs;
 
-import com.google.android.material.snackbar.Snackbar;
+import android.content.Intent;
+import android.graphics.Color;
+import android.hardware.Sensor;
+import android.hardware.SensorEvent;
+import android.hardware.SensorEventListener;
+import android.hardware.SensorManager;
+import android.hardware.TriggerEvent;
+import android.hardware.TriggerEventListener;
+import android.os.Bundle;
+import android.view.Menu;
+import android.view.MenuItem;
+import android.view.View;
+import android.widget.Button;
+import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
-
-import android.view.View;
-
+import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.navigation.NavController;
 import androidx.navigation.Navigation;
 import androidx.navigation.ui.AppBarConfiguration;
@@ -18,56 +27,50 @@ import androidx.navigation.ui.NavigationUI;
 
 import com.example.tp2.databinding.ActivityMainBinding;
 
-import android.view.Menu;
-import android.view.MenuItem;
-import android.widget.Button;
-import android.widget.TextView;
-
-import java.util.List;
-
-public class MainActivity extends AppCompatActivity {
+public class FourthActivity extends AppCompatActivity {
 
     private AppBarConfiguration appBarConfiguration;
     private ActivityMainBinding binding;
 
     private SensorManager mSensorManager;
-    TextView mSensorsTot,mSensorAvailables;
-
+    private Sensor mot;
+    private TriggerEventListener triggerEventListener;
 
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
-        // Get the texts fields of the layout and setup to invisible
-        mSensorsTot   = (TextView) findViewById(R.id.sensoritot);
-        mSensorAvailables  = (TextView) findViewById(R.id.sensoridisponibili);
+        setContentView(R.layout.activity_fourth);
 
-        // Get the SensorManager
+        TextView d = (TextView) findViewById(R.id.direction);
+
         mSensorManager= (SensorManager) getSystemService(SENSOR_SERVICE);
+        mot = mSensorManager.getDefaultSensor(Sensor.TYPE_MOTION_DETECT);
+        if (mot == null){
+            Toast.makeText(getApplicationContext(), "Sensor unavailable", Toast.LENGTH_LONG).show();
+        } else {
+            mSensorManager.registerListener(new SensorEventListener() {
+                @Override
+                public void onAccuracyChanged(Sensor sensor, int i) {
 
-        // List of Sensors Available
-        List<Sensor> msensorList = mSensorManager.getSensorList(Sensor.TYPE_ALL);
+                }
 
-        // Print how may Sensors are there
-        mSensorsTot.setText(msensorList.size()+" "+this.getString(R.string.sensors)+"!");
+                @Override
+                public void onSensorChanged(SensorEvent event) {
+                    float x = event.values[0];
+                    float y = event.values[1] - 9.81f;
 
-        // Print each Sensor available using sSensList as the String to be printed
-        String sSensList = new String("");
-        Sensor tmp;
-        int x,i;
-        for (i=0;i<msensorList.size();i++){
-            tmp = msensorList.get(i);
-            sSensList = " "+sSensList+tmp.getName(); // Add the sensor name to the string of sensors available
+                    String lr = x < -0.01f? "Gauche": x > 0.01f? "Droit": "";
+                    String ud = y < -0.01f? "Bas": y > 0.01f? "Haut": "";
+
+                    d.setText(lr + ud);
+                }
+            }, mot, 2);
         }
-        // if there are sensors available show the list
-        if (i>0){
-            sSensList = getString(R.string.sensors)+":"+sSensList;
-            mSensorAvailables.setText(sSensList);
-        }
-        Button butt = (Button) findViewById(R.id.button);
+
+        Button butt = (Button) findViewById(R.id.button4);
         butt.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                startActivity(new Intent(MainActivity.this, SecondActivity.class));
+                startActivity(new Intent(FourthActivity.this, FifthActivity.class));
             }
         });
     }

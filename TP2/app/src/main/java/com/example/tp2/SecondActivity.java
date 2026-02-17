@@ -22,52 +22,41 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.Button;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import java.util.List;
 
-public class MainActivity extends AppCompatActivity {
+public class SecondActivity extends AppCompatActivity {
 
     private AppBarConfiguration appBarConfiguration;
     private ActivityMainBinding binding;
 
     private SensorManager mSensorManager;
-    TextView mSensorsTot,mSensorAvailables;
+    TextView mSensorsTot, mSensorAvailables;
 
 
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
+        setContentView(R.layout.activity_second);
         // Get the texts fields of the layout and setup to invisible
-        mSensorsTot   = (TextView) findViewById(R.id.sensoritot);
-        mSensorAvailables  = (TextView) findViewById(R.id.sensoridisponibili);
+        mSensorsTot   = (TextView) findViewById(R.id.sensoritot2);
+        mSensorAvailables  = (TextView) findViewById(R.id.sensoridisponibili2);
 
         // Get the SensorManager
         mSensorManager= (SensorManager) getSystemService(SENSOR_SERVICE);
-
         // List of Sensors Available
         List<Sensor> msensorList = mSensorManager.getSensorList(Sensor.TYPE_ALL);
 
-        // Print how may Sensors are there
-        mSensorsTot.setText(msensorList.size()+" "+this.getString(R.string.sensors)+"!");
+        if (mSensorManager.getDefaultSensor(Sensor.TYPE_HEART_BEAT) == null){
+            mSensorsTot.setText("Missing sensor!");
+            mSensorAvailables.setText("Sensor TYPE_HEART_BEAT");
+        }
 
-        // Print each Sensor available using sSensList as the String to be printed
-        String sSensList = new String("");
-        Sensor tmp;
-        int x,i;
-        for (i=0;i<msensorList.size();i++){
-            tmp = msensorList.get(i);
-            sSensList = " "+sSensList+tmp.getName(); // Add the sensor name to the string of sensors available
-        }
-        // if there are sensors available show the list
-        if (i>0){
-            sSensList = getString(R.string.sensors)+":"+sSensList;
-            mSensorAvailables.setText(sSensList);
-        }
-        Button butt = (Button) findViewById(R.id.button);
+        Button butt = (Button) findViewById(R.id.button2);
         butt.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                startActivity(new Intent(MainActivity.this, SecondActivity.class));
+                startActivity(new Intent(SecondActivity.this, ThirdActivity.class));
             }
         });
     }
