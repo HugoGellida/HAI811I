@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">TP1</string>
+    <string name="action_settings">Options</string>
+    <string name="first_fragment_label">Premier fragment</string>
+    <string name="second_fragment_label">Deuxième fragment</string>
+    <string name="next">Suivant</string>
+    <string name="previous">Précédent</string>
+    <string name="name">Entrer votre nom</string>
+    <string name="first_name">Entrer votre prenom</string>
+    <string name="age">XX</string>
+    <string name="comp">Entrer vos compétences</string>
+    <string name="confirm">Confirmer</string>
+    <string name="third_fragment_label">Troisième Fragment</string>
+</resources>
