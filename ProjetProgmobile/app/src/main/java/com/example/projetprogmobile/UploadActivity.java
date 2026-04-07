@@ -4,6 +4,7 @@ import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.Toast;
 
@@ -19,7 +20,8 @@ import java.util.UUID;
 public class UploadActivity extends AppCompatActivity {
 
     private ImageView imageView;
-    private Button uploadBtn;
+    Button selectBtn;
+    EditText description;
     private Uri imageUri;
 
     private FirebaseStorage storage;
@@ -31,19 +33,16 @@ public class UploadActivity extends AppCompatActivity {
         setContentView(R.layout.activity_upload);
 
         imageView = findViewById(R.id.imageView);
-        uploadBtn = findViewById(R.id.uploadBtn);
+        selectBtn = findViewById(R.id.selectBtn);
+        description = findViewById(R.id.description);
 
-        storage = FirebaseStorage.getInstance();
-        db = FirebaseFirestore.getInstance();
-
-        imageView.setOnClickListener(v -> selectImage());
-        uploadBtn.setOnClickListener(v -> uploadImage());
+        selectBtn.setOnClickListener(v -> selectImage());
     }
 
     private void selectImage() {
         Intent intent = new Intent(Intent.ACTION_PICK);
         intent.setType("image/*");
-        startActivityForResult(intent, 1);
+        // startActivityForResult(intent, 1);
     }
 
     @Override
@@ -61,9 +60,11 @@ public class UploadActivity extends AppCompatActivity {
         ref.putFile(imageUri)
                 .addOnSuccessListener(task -> ref.getDownloadUrl().addOnSuccessListener(uri -> {
 
+                    String desc = description.getText().toString();
+
                     Photo photo = new Photo(
                             uri.toString(),
-                            "Description test",
+                            desc,
                             FirebaseAuth.getInstance().getUid()
                     );
 

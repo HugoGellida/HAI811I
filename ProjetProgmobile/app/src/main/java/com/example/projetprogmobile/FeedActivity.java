@@ -1,8 +1,10 @@
 package com.example.projetprogmobile;
 
 import android.os.Bundle;
+import android.widget.Button;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.firebase.firestore.DocumentSnapshot;
@@ -14,6 +16,7 @@ import java.util.List;
 public class FeedActivity extends AppCompatActivity {
 
     private RecyclerView recyclerView;
+    private Button uploadButton;
     private PhotoAdapter adapter;
     private List<Photo> photoList = new ArrayList<>();
 
@@ -30,6 +33,12 @@ public class FeedActivity extends AppCompatActivity {
         adapter = new PhotoAdapter(photoList);
         recyclerView.setAdapter(adapter);
 
+        uploadButton = findViewById(R.id.upload_button);
+        uploadButton.setOnClickListener(v -> {
+            // Handle upload button click
+        });
+
+
         db = FirebaseFirestore.getInstance();
 
         loadPhotos();
@@ -39,6 +48,7 @@ public class FeedActivity extends AppCompatActivity {
         db.collection("photos")
                 .addSnapshotListener((value, error) -> {
                     photoList.clear();
+                    assert value != null;
                     for(DocumentSnapshot doc : value.getDocuments()) {
                         Photo p = doc.toObject(Photo.class);
                         photoList.add(p);
