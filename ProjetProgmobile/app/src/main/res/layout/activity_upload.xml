@@ -1,0 +1,40 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical"
+    android:padding="20dp"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <!-- Aperçu de l'image -->
+    <ImageView
+        android:id="@+id/imageView"
+        android:layout_width="match_parent"
+        android:layout_height="250dp"
+        android:background="#CCCCCC"
+        android:scaleType="centerCrop"
+        android:contentDescription="Image sélectionnée"/>
+
+    <!-- Bouton pour choisir une image -->
+    <Button
+        android:id="@+id/selectBtn"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Choisir une image"
+        android:layout_marginTop="10dp"/>
+
+    <!-- Description -->
+    <EditText
+        android:id="@+id/description"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Description de la photo"
+        android:layout_marginTop="10dp"/>
+
+    <!-- Bouton upload -->
+    <Button
+        android:id="@+id/uploadBtn"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Publier"
+        android:layout_marginTop="20dp"/>
+
+</LinearLayout>
