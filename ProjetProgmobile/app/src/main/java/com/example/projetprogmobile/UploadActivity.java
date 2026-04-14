@@ -20,12 +20,14 @@ import java.util.UUID;
 public class UploadActivity extends AppCompatActivity {
 
     private ImageView imageView;
-    Button selectBtn;
+    Button selectBtn, uploadBtn;
     EditText description;
     private Uri imageUri;
 
     private FirebaseStorage storage;
     private FirebaseFirestore db;
+
+    private static final int PICK_IMAGE = 1;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -34,21 +36,34 @@ public class UploadActivity extends AppCompatActivity {
 
         imageView = findViewById(R.id.imageView);
         selectBtn = findViewById(R.id.selectBtn);
+        uploadBtn = findViewById(R.id.uploadBtn);
         description = findViewById(R.id.description);
 
+        storage = FirebaseStorage.getInstance();
+        db = FirebaseFirestore.getInstance();
+
         selectBtn.setOnClickListener(v -> selectImage());
+
+        uploadBtn.setOnClickListener(v -> {
+            if (imageUri != null) {
+                uploadImage();
+            } else {
+                Toast.makeText(this, "Choisis une image", Toast.LENGTH_SHORT).show();
+            }
+        });
     }
 
     private void selectImage() {
         Intent intent = new Intent(Intent.ACTION_PICK);
         intent.setType("image/*");
-        // startActivityForResult(intent, 1);
+        startActivityForResult(intent, PICK_IMAGE); // 🔥 IMPORTANT
     }
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-        if(requestCode == 1 && resultCode == RESULT_OK) {
+
+        if (requestCode == PICK_IMAGE && resultCode == RESULT_OK && data != null) {
             imageUri = data.getData();
             imageView.setImageURI(imageUri);
         }
@@ -69,7 +84,14 @@ public class UploadActivity extends AppCompatActivity {
                     );
 
                     db.collection("photos").add(photo);
+
                     Toast.makeText(this, "Upload réussi", Toast.LENGTH_SHORT).show();
-                }));
+
+                    // 🔥 Retour au Feed
+                    finish();
+                }))
+                .addOnFailureListener(e ->
+                        Toast.makeText(this, "Erreur upload", Toast.LENGTH_SHORT).show()
+                );
     }
 }

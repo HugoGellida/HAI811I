@@ -1,5 +1,6 @@
 package com.example.projetprogmobile;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.widget.Button;
 
@@ -35,7 +36,7 @@ public class FeedActivity extends AppCompatActivity {
 
         uploadButton = findViewById(R.id.upload_button);
         uploadButton.setOnClickListener(v -> {
-            // Handle upload button click
+            startActivity(new Intent(this, UploadActivity.class));
         });
 
 
