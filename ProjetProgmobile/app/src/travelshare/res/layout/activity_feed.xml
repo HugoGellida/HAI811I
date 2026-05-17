@@ -28,6 +28,13 @@
             android:layout_marginBottom="8dp"
             android:queryHint="@string/travelshare_search_hint" />
 
+        <Button
+            android:id="@+id/place_mode_button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="8dp"
+            android:text="@string/travelshare_place_mode_off" />
+
         <TextView
             android:id="@+id/search_summary_text"
             android:layout_width="match_parent"

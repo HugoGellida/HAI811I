@@ -12,10 +12,15 @@
     <string name="travelshare_location_tag">Taguer un lieu dans TravelPath</string>
     <string name="travelshare_keywords_hint">Mots-cle separes par des virgules</string>
     <string name="travelshare_search_hint">Rechercher un mot-cle ou un lieu</string>
-    <string name="travelshare_search_keyword_summary">Recherche active : %1$s</string>
+    <string name="travelshare_search_keyword_summary">Recherche texte active : %1$s</string>
     <string name="travelshare_search_no_results">Aucun post ne correspond a %1$s.</string>
+    <string name="travelshare_search_place_loading">Recherche des posts proches de %1$s...</string>
+    <string name="travelshare_search_place_mode_summary">Mode lieu actif : %1$s</string>
+    <string name="travelshare_search_place_not_found">Lieu introuvable pour %1$s.</string>
     <string name="travelshare_search_place_summary">Resultats autour de %1$s dans un rayon de %2$d km.</string>
     <string name="travelshare_search_place_empty">Aucun post geolocalise pres de %1$s.</string>
+    <string name="travelshare_place_mode_off">Mode lieu desactive</string>
+    <string name="travelshare_place_mode_on">Mode lieu active</string>
     <string name="travelshare_sign_in">Se connecter</string>
     <string name="travelshare_publish">Publier une photo</string>
     <string name="travelshare_publish_locked">Connexion requise pour publier</string>

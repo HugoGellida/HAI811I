@@ -39,6 +39,7 @@ public class FeedActivity extends AppCompatActivity {
     private RecyclerView recyclerView;
     private Button uploadButton;
     private Button authButton;
+    private Button placeModeButton;
     private SearchView searchView;
     private TextView authStatusView;
     private TextView feedStatusView;
@@ -55,6 +56,8 @@ public class FeedActivity extends AppCompatActivity {
     private LatLng currentSearchCenter;
     private String currentSearchLocationLabel;
     private int searchRequestToken;
+    private boolean forcePlaceMode;
+    private boolean placeSearchPending;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -67,6 +70,7 @@ public class FeedActivity extends AppCompatActivity {
         adapter = new PhotoAdapter(photoList, this::confirmDeletePhoto, this::openPhotoLocation);
         recyclerView.setAdapter(adapter);
 
+        placeModeButton = findViewById(R.id.place_mode_button);
         searchView = findViewById(R.id.search_view);
         authStatusView = findViewById(R.id.auth_status_text);
         feedStatusView = findViewById(R.id.feed_status_text);
@@ -92,6 +96,7 @@ public class FeedActivity extends AppCompatActivity {
         db = FirebaseFirestore.getInstance();
 
         configureSearch();
+        configurePlaceModeButton();
         updateAuthenticationUi();
         loadPhotos();
     }
@@ -173,16 +178,25 @@ public class FeedActivity extends AppCompatActivity {
         searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
             @Override
             public boolean onQueryTextSubmit(String query) {
-                updateSearchQuery(query, true);
+                updateSearchQuery(query, forcePlaceMode);
                 searchView.clearFocus();
                 return true;
             }
 
             @Override
             public boolean onQueryTextChange(String newText) {
-                updateSearchQuery(newText, false);
+                updateSearchQuery(newText, forcePlaceMode);
                 return true;
             }
+        });
+    }
+
+    private void configurePlaceModeButton() {
+        updatePlaceModeButton();
+        placeModeButton.setOnClickListener(v -> {
+            forcePlaceMode = !forcePlaceMode;
+            updatePlaceModeButton();
+            updateSearchQuery(currentSearchQuery, forcePlaceMode);
         });
     }
 
@@ -191,10 +205,15 @@ public class FeedActivity extends AppCompatActivity {
         currentSearchCenter = null;
         currentSearchLocationLabel = null;
         searchRequestToken++;
+        placeSearchPending = forcePlaceMode && !currentSearchQuery.isEmpty();
 
         applyFilters();
 
         if (!resolvePlace || currentSearchQuery.isEmpty() || !Geocoder.isPresent()) {
+            placeSearchPending = false;
+            if (forcePlaceMode && !currentSearchQuery.isEmpty() && !Geocoder.isPresent()) {
+                applyFilters();
+            }
             return;
         }
 
@@ -227,6 +246,7 @@ public class FeedActivity extends AppCompatActivity {
                     return;
                 }
 
+                placeSearchPending = false;
                 currentSearchCenter = finalResolvedLocation;
                 currentSearchLocationLabel = finalResolvedLocation != null ? finalResolvedLabel : null;
                 applyFilters();
@@ -243,6 +263,22 @@ public class FeedActivity extends AppCompatActivity {
             updateSearchSummary(null);
             updateFeedStatus(photoList.isEmpty() ? getString(R.string.travelshare_feed_empty) : null);
             return;
+        }
+
+        if (forcePlaceMode) {
+            if (placeSearchPending) {
+                adapter.notifyDataSetChanged();
+                updateSearchSummary(getString(R.string.travelshare_search_place_loading, currentSearchQuery));
+                updateFeedStatus(null);
+                return;
+            }
+
+            if (currentSearchCenter == null) {
+                adapter.notifyDataSetChanged();
+                updateSearchSummary(getString(R.string.travelshare_search_place_mode_summary, currentSearchQuery));
+                updateFeedStatus(getString(R.string.travelshare_search_place_not_found, currentSearchQuery));
+                return;
+            }
         }
 
         if (currentSearchCenter != null) {
@@ -291,6 +327,13 @@ public class FeedActivity extends AppCompatActivity {
         boolean hasSummary = summary != null && !summary.trim().isEmpty();
         searchSummaryView.setVisibility(hasSummary ? View.VISIBLE : View.GONE);
         searchSummaryView.setText(hasSummary ? summary : "");
+    }
+
+    private void updatePlaceModeButton() {
+        placeModeButton.setText(forcePlaceMode
+                ? R.string.travelshare_place_mode_on
+                : R.string.travelshare_place_mode_off);
+        placeModeButton.setAlpha(forcePlaceMode ? 1f : 0.75f);
     }
 
     private double distanceBetween(LatLng searchCenter, Photo photo) {
