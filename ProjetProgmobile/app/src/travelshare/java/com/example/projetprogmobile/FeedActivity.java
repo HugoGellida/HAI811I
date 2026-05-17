@@ -1,5 +1,6 @@
 package com.example.projetprogmobile;
 
+import android.content.Context;
 import android.content.Intent;
 import android.location.Address;
 import android.location.Geocoder;
@@ -14,6 +15,8 @@ import android.widget.SearchView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -34,6 +37,8 @@ import java.util.concurrent.Executors;
 
 public class FeedActivity extends AppCompatActivity {
 
+    public static final String EXTRA_FOCUSED_PHOTO_ID = "com.example.projetprogmobile.extra.FOCUSED_PHOTO_ID";
+    public static final String EXTRA_FOCUSED_PHOTO_LABEL = "com.example.projetprogmobile.extra.FOCUSED_PHOTO_LABEL";
     private static final double PLACE_SEARCH_RADIUS_KM = 100d;
 
     private RecyclerView recyclerView;
@@ -55,9 +60,20 @@ public class FeedActivity extends AppCompatActivity {
     private String currentSearchQuery = "";
     private LatLng currentSearchCenter;
     private String currentSearchLocationLabel;
+    private String focusedPhotoId;
+    private String focusedPhotoLabel;
     private int searchRequestToken;
     private boolean forcePlaceMode;
     private boolean placeSearchPending;
+
+    public static Intent createFocusedPhotoIntent(Context context, @NonNull String photoId, @Nullable String label) {
+        Intent intent = new Intent(context, FeedActivity.class);
+        intent.putExtra(EXTRA_FOCUSED_PHOTO_ID, photoId);
+        if (label != null && !label.trim().isEmpty()) {
+            intent.putExtra(EXTRA_FOCUSED_PHOTO_LABEL, label);
+        }
+        return intent;
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -94,6 +110,7 @@ public class FeedActivity extends AppCompatActivity {
         });
 
         db = FirebaseFirestore.getInstance();
+        readFocusedPhotoIntent();
 
         configureSearch();
         configurePlaceModeButton();
@@ -194,6 +211,7 @@ public class FeedActivity extends AppCompatActivity {
     private void configurePlaceModeButton() {
         updatePlaceModeButton();
         placeModeButton.setOnClickListener(v -> {
+            clearFocusedPhotoFilter();
             forcePlaceMode = !forcePlaceMode;
             updatePlaceModeButton();
             updateSearchQuery(currentSearchQuery, forcePlaceMode);
@@ -201,6 +219,7 @@ public class FeedActivity extends AppCompatActivity {
     }
 
     private void updateSearchQuery(String rawQuery, boolean resolvePlace) {
+        clearFocusedPhotoFilter();
         currentSearchQuery = rawQuery == null ? "" : rawQuery.trim();
         currentSearchCenter = null;
         currentSearchLocationLabel = null;
@@ -256,6 +275,26 @@ public class FeedActivity extends AppCompatActivity {
 
     private void applyFilters() {
         photoList.clear();
+
+        if (focusedPhotoId != null && !focusedPhotoId.trim().isEmpty()) {
+            for (Photo photo : allPhotos) {
+                if (photo != null && focusedPhotoId.equals(photo.getId())) {
+                    photoList.add(photo);
+                    break;
+                }
+            }
+
+            updateSearchSummary(photoList.isEmpty()
+                    ? getString(R.string.travelshare_feed_focus_missing)
+                    : getString(
+                    R.string.travelshare_feed_focus_summary,
+                    focusedPhotoLabel != null && !focusedPhotoLabel.trim().isEmpty()
+                            ? focusedPhotoLabel
+                            : photoList.get(0).getDisplayLocationName()));
+            updateFeedStatus(photoList.isEmpty() ? getString(R.string.travelshare_feed_focus_missing) : null);
+            adapter.notifyDataSetChanged();
+            return;
+        }
 
         if (currentSearchQuery.isEmpty()) {
             photoList.addAll(allPhotos);
@@ -381,6 +420,25 @@ public class FeedActivity extends AppCompatActivity {
                 photo.getLatitude(),
                 photo.getLongitude(),
                 photo.getDisplayLocationName()));
+    }
+
+    private void readFocusedPhotoIntent() {
+        Intent intent = getIntent();
+        if (intent == null) {
+            return;
+        }
+
+        focusedPhotoId = intent.getStringExtra(EXTRA_FOCUSED_PHOTO_ID);
+        focusedPhotoLabel = intent.getStringExtra(EXTRA_FOCUSED_PHOTO_LABEL);
+    }
+
+    private void clearFocusedPhotoFilter() {
+        if (focusedPhotoId == null && focusedPhotoLabel == null) {
+            return;
+        }
+
+        focusedPhotoId = null;
+        focusedPhotoLabel = null;
     }
 
     private static final class PhotoDistance {

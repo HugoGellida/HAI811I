@@ -34,6 +34,8 @@
     <string name="travelshare_delete_failure">Suppression impossible.</string>
     <string name="travelshare_delete_not_allowed">Vous ne pouvez supprimer que vos propres posts.</string>
     <string name="travelshare_feed_empty">Aucun post pour le moment.</string>
+    <string name="travelshare_feed_focus_summary">Post TravelShare ouvert depuis la carte : %1$s</string>
+    <string name="travelshare_feed_focus_missing">Le post selectionne n est plus disponible.</string>
     <string name="travelshare_feed_error">Impossible de charger les posts. Verifiez Firestore, les regles et la connexion.</string>
     <string name="travelshare_feed_error_with_code">Impossible de charger les posts (%1$s). Verifiez Firestore, les regles et la connexion.</string>
     <string name="action_settings">Settings</string>
