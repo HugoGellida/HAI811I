@@ -1,31 +1,43 @@
 package com.example.projetprogmobile;
 
+import android.content.Context;
 import android.content.Intent;
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.os.Bundle;
 import android.provider.MediaStore;
 import android.util.Base64;
+import android.util.Log;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.travelpath.MapActivity;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.SetOptions;
 
 import java.io.ByteArrayOutputStream;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 public class UploadActivity extends AppCompatActivity {
+
+    public static final String EXTRA_EDIT_PHOTO_ID = "com.example.projetprogmobile.extra.EDIT_PHOTO_ID";
+    private static final String TAG = "UploadActivity";
 
     private ImageView imageView;
     private Button selectBtn;
@@ -38,6 +50,10 @@ public class UploadActivity extends AppCompatActivity {
     private double selectedLatitude;
     private double selectedLongitude;
     private String selectedLocationName;
+    private String editingPhotoId;
+    private String existingImageBase64;
+    private boolean editMode;
+    private Photo editablePhoto;
 
     private FirebaseFirestore db;
     private String currentAuthorDisplayName;
@@ -45,6 +61,12 @@ public class UploadActivity extends AppCompatActivity {
 
     private static final int PICK_IMAGE = 1;
     private static final int PICK_LOCATION = 2;
+
+    public static Intent createEditIntent(@NonNull Context context, @NonNull String photoId) {
+        Intent intent = new Intent(context, UploadActivity.class);
+        intent.putExtra(EXTRA_EDIT_PHOTO_ID, photoId);
+        return intent;
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -66,6 +88,8 @@ public class UploadActivity extends AppCompatActivity {
         description = findViewById(R.id.description);
         keywordsInput = findViewById(R.id.keywordsInput);
         locationValue = findViewById(R.id.locationValue);
+        editingPhotoId = getIntent().getStringExtra(EXTRA_EDIT_PHOTO_ID);
+        editMode = editingPhotoId != null && !editingPhotoId.trim().isEmpty();
 
         db = FirebaseFirestore.getInstance();
         loadCurrentAuthorProfile();
@@ -74,12 +98,19 @@ public class UploadActivity extends AppCompatActivity {
         selectLocationBtn.setOnClickListener(v -> openLocationPicker());
 
         uploadBtn.setOnClickListener(v -> {
-            if (imageUri != null) {
-                uploadImage();
-            } else {
+            if (!hasImageForSubmission()) {
                 Toast.makeText(this, "Choisis une image", Toast.LENGTH_SHORT).show();
+                return;
             }
+
+            uploadImage();
         });
+
+        if (editMode) {
+            setTitle(R.string.travelshare_edit_post_title);
+            uploadBtn.setText(R.string.travelshare_edit_post_confirm);
+            loadPhotoForEditing();
+        }
 
         updateSelectedLocationUi();
     }
@@ -162,7 +193,7 @@ public class UploadActivity extends AppCompatActivity {
             return;
         }
 
-        String base64Image = imageToBase64(imageUri);
+        String base64Image = imageUri != null ? imageToBase64(imageUri) : existingImageBase64;
 
         if (base64Image == null) {
             Toast.makeText(this, "Erreur image", Toast.LENGTH_SHORT).show();
@@ -178,6 +209,9 @@ public class UploadActivity extends AppCompatActivity {
         );
         photo.setAuthorDisplayName(resolveCurrentAuthorDisplayName());
         photo.setAuthorAvatarBase64(currentAuthorAvatarBase64);
+        photo.setLikes(editablePhoto != null ? editablePhoto.getLikes() : 0);
+        photo.setLikedByUserIds(editablePhoto != null ? editablePhoto.getLikedByUserIds() : new ArrayList<>());
+        photo.setCommentsCount(editablePhoto != null ? editablePhoto.getCommentsCount() : 0);
 
         if (selectedLocationName != null && !selectedLocationName.trim().isEmpty()) {
             photo.setLatitude(selectedLatitude);
@@ -187,10 +221,36 @@ public class UploadActivity extends AppCompatActivity {
 
         photo.setKeywords(parseKeywords());
 
-        db.collection("photos").add(photo);
+        if (editMode) {
+            Map<String, Object> updates = new HashMap<>();
+            updates.put("imageBase64", photo.getImageBase64());
+            updates.put("description", photo.getDescription());
+            updates.put("userId", photo.getUserId());
+            updates.put("authorDisplayName", photo.getAuthorDisplayName());
+            updates.put("authorAvatarBase64", photo.getAuthorAvatarBase64());
+            updates.put("keywords", photo.getKeywords());
+            updates.put("latitude", photo.getLatitude());
+            updates.put("longitude", photo.getLongitude());
+            updates.put("locationName", photo.getLocationName());
+            updates.put("timestamp", System.currentTimeMillis());
+            db.collection("photos")
+                    .document(editingPhotoId)
+                    .set(updates, SetOptions.merge())
+                    .addOnSuccessListener(unused -> {
+                        Toast.makeText(this, R.string.travelshare_edit_success, Toast.LENGTH_SHORT).show();
+                        finish();
+                    })
+                    .addOnFailureListener(error -> Toast.makeText(this, R.string.travelshare_edit_failure, Toast.LENGTH_SHORT).show());
+            return;
+        }
 
-        Toast.makeText(this, "Upload réussi", Toast.LENGTH_SHORT).show();
-        finish();
+        db.collection("photos")
+                .add(photo)
+                .addOnSuccessListener(unused -> {
+                    Toast.makeText(this, "Upload réussi", Toast.LENGTH_SHORT).show();
+                    finish();
+                })
+                .addOnFailureListener(error -> Toast.makeText(this, "Erreur upload", Toast.LENGTH_SHORT).show());
     }
 
     private void updateSelectedLocationUi() {
@@ -250,5 +310,96 @@ public class UploadActivity extends AppCompatActivity {
         }
 
         return "Voyageur";
+    }
+
+    private boolean hasImageForSubmission() {
+        return imageUri != null || (existingImageBase64 != null && !existingImageBase64.trim().isEmpty());
+    }
+
+    private void loadPhotoForEditing() {
+        FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
+        if (currentUser == null || currentUser.getUid() == null) {
+            finish();
+            return;
+        }
+
+        db.collection("photos")
+                .document(editingPhotoId)
+                .get()
+                .addOnSuccessListener(this::bindEditablePhoto)
+                .addOnFailureListener(error -> {
+                    Log.e(TAG, "Impossible de charger le post a modifier", error);
+                    Toast.makeText(this, R.string.travelshare_edit_failure, Toast.LENGTH_SHORT).show();
+                    finish();
+                });
+    }
+
+    private void bindEditablePhoto(@NonNull DocumentSnapshot documentSnapshot) {
+        FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
+        Photo photo = documentSnapshot.toObject(Photo.class);
+
+        if (currentUser == null || photo == null || photo.getUserId() == null || !photo.getUserId().equals(currentUser.getUid())) {
+            Toast.makeText(this, R.string.travelshare_edit_not_allowed, Toast.LENGTH_SHORT).show();
+            finish();
+            return;
+        }
+
+        editablePhoto = photo;
+        existingImageBase64 = photo.getImageBase64();
+        description.setText(photo.getDescription() != null ? photo.getDescription() : "");
+        keywordsInput.setText(buildKeywordsInput(photo));
+
+        if (photo.hasTaggedLocation()) {
+            selectedLatitude = photo.getLatitude();
+            selectedLongitude = photo.getLongitude();
+            selectedLocationName = photo.getLocationName();
+        }
+
+        renderExistingImage(existingImageBase64);
+        updateSelectedLocationUi();
+    }
+
+    private void renderExistingImage(@Nullable String base64Image) {
+        if (base64Image == null || base64Image.trim().isEmpty()) {
+            imageView.setImageResource(android.R.drawable.ic_menu_report_image);
+            return;
+        }
+
+        try {
+            byte[] decodedBytes = Base64.decode(base64Image.trim(), Base64.NO_WRAP);
+            BitmapFactory.Options options = new BitmapFactory.Options();
+            options.inPreferredConfig = Bitmap.Config.RGB_565;
+            Bitmap bitmap = BitmapFactory.decodeByteArray(decodedBytes, 0, decodedBytes.length, options);
+            if (bitmap != null) {
+                imageView.setImageBitmap(bitmap);
+                return;
+            }
+        } catch (IllegalArgumentException error) {
+            Log.e(TAG, "Base64 image invalide pour l edition", error);
+        }
+
+        imageView.setImageResource(android.R.drawable.ic_menu_report_image);
+    }
+
+    @NonNull
+    private String buildKeywordsInput(@NonNull Photo photo) {
+        if (!photo.hasKeywords()) {
+            return "";
+        }
+
+        StringBuilder builder = new StringBuilder();
+        for (String keyword : photo.getKeywords()) {
+            if (keyword == null || keyword.trim().isEmpty()) {
+                continue;
+            }
+
+            if (builder.length() > 0) {
+                builder.append(", ");
+            }
+
+            builder.append(keyword.trim());
+        }
+
+        return builder.toString();
     }
 }

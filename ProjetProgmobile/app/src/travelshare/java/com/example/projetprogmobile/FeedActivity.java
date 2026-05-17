@@ -28,18 +28,86 @@ import com.google.android.gms.maps.model.LatLng;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.WriteBatch;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 public class FeedActivity extends AppCompatActivity {
-
     public static final String EXTRA_FOCUSED_PHOTO_ID = "com.example.projetprogmobile.extra.FOCUSED_PHOTO_ID";
     public static final String EXTRA_FOCUSED_PHOTO_LABEL = "com.example.projetprogmobile.extra.FOCUSED_PHOTO_LABEL";
+
+    private void refreshAllPhotoSocialState() {
+        for (Photo photo : allPhotos) {
+            refreshPhotoSocialState(photo);
+        }
+    }
+
+    private void refreshPhotoSocialState(@Nullable Photo photo) {
+        if (photo == null || photo.getId() == null || photo.getId().trim().isEmpty()) {
+            return;
+        }
+
+        String photoId = photo.getId();
+        db.collection("photos")
+                .document(photoId)
+                .collection("likes")
+                .get()
+                .addOnSuccessListener(snapshot -> {
+                    int likeCount = snapshot.size();
+                    if (photo.getLikes() != likeCount) {
+                        photo.setLikes(likeCount);
+                        adapter.notifyDataSetChanged();
+                    }
+                });
+
+        db.collection("photos")
+                .document(photoId)
+                .collection("comments")
+                .get()
+                .addOnSuccessListener(snapshot -> {
+                    int commentCount = snapshot.size();
+                    if (photo.getCommentsCount() != commentCount) {
+                        photo.setCommentsCount(commentCount);
+                        adapter.notifyDataSetChanged();
+                    }
+                });
+
+        String currentUserId = auth.getUid();
+        if (currentUserId == null || currentUserId.trim().isEmpty()) {
+            if (!photo.getLikedByUserIds().isEmpty()) {
+                photo.setLikedByUserIds(new ArrayList<>());
+                adapter.notifyDataSetChanged();
+            }
+            return;
+        }
+
+        db.collection("photos")
+                .document(photoId)
+                .collection("likes")
+                .document(currentUserId)
+                .get()
+                .addOnSuccessListener(documentSnapshot -> {
+                    boolean isLiked = documentSnapshot.exists();
+                    boolean alreadyApplied = photo.isLikedBy(currentUserId);
+                    if (isLiked == alreadyApplied) {
+                        return;
+                    }
+
+                    List<String> likedByUserIds = new ArrayList<>();
+                    if (isLiked) {
+                        likedByUserIds.add(currentUserId);
+                    }
+                    photo.setLikedByUserIds(likedByUserIds);
+                    adapter.notifyDataSetChanged();
+                });
+    }
     private static final double PLACE_SEARCH_RADIUS_KM = 100d;
 
     private RecyclerView recyclerView;
@@ -85,7 +153,13 @@ public class FeedActivity extends AppCompatActivity {
         recyclerView = findViewById(R.id.recyclerView);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
 
-        adapter = new PhotoAdapter(photoList, this::confirmDeletePhoto, this::openPhotoLocation);
+        adapter = new PhotoAdapter(
+            photoList,
+            this::confirmDeletePhoto,
+            this::openPhotoLocation,
+            this::editPhoto,
+            this::toggleLikePhoto,
+            this::openComments);
         recyclerView.setAdapter(adapter);
 
         placeModeButton = findViewById(R.id.place_mode_button);
@@ -129,6 +203,7 @@ public class FeedActivity extends AppCompatActivity {
         super.onResume();
         updateAuthenticationUi();
         refreshProfileAvatar();
+        refreshAllPhotoSocialState();
     }
 
     @Override
@@ -432,9 +507,93 @@ public class FeedActivity extends AppCompatActivity {
     private void deletePhoto(Photo photo) {
         db.collection("photos")
                 .document(photo.getId())
-                .delete()
-                .addOnSuccessListener(unused -> Toast.makeText(this, R.string.travelshare_delete_success, Toast.LENGTH_SHORT).show())
+                .collection("comments")
+                .get()
+                .addOnSuccessListener(querySnapshot -> {
+                    db.collection("photos")
+                            .document(photo.getId())
+                            .collection("likes")
+                            .get()
+                            .addOnSuccessListener(likesSnapshot -> {
+                                WriteBatch batch = db.batch();
+                                for (DocumentSnapshot commentSnapshot : querySnapshot.getDocuments()) {
+                                    batch.delete(commentSnapshot.getReference());
+                                }
+                                for (DocumentSnapshot likeSnapshot : likesSnapshot.getDocuments()) {
+                                    batch.delete(likeSnapshot.getReference());
+                                }
+
+                                batch.delete(db.collection("photos").document(photo.getId()));
+                                batch.commit()
+                                        .addOnSuccessListener(unused -> Toast.makeText(this, R.string.travelshare_delete_success, Toast.LENGTH_SHORT).show())
+                                        .addOnFailureListener(error -> Toast.makeText(this, R.string.travelshare_delete_failure, Toast.LENGTH_SHORT).show());
+                            })
+                            .addOnFailureListener(error -> Toast.makeText(this, R.string.travelshare_delete_failure, Toast.LENGTH_SHORT).show());
+                })
                 .addOnFailureListener(error -> Toast.makeText(this, R.string.travelshare_delete_failure, Toast.LENGTH_SHORT).show());
+    }
+
+    private void toggleLikePhoto(Photo photo) {
+        if (auth.getCurrentUser() == null) {
+            startActivity(FeatureNavigation.createLoginIntent(this, FeatureNavigation.DESTINATION_TRAVEL_SHARE));
+            return;
+        }
+
+        if (photo == null || photo.getId() == null || auth.getUid() == null) {
+            return;
+        }
+
+        String currentUserId = auth.getUid();
+        boolean alreadyLiked = photo.isLikedBy(auth.getUid());
+        if (alreadyLiked) {
+            db.collection("photos")
+                .document(photo.getId())
+                .collection("likes")
+                .document(currentUserId)
+                .delete()
+                .addOnSuccessListener(unused -> {
+                photo.setLikes(Math.max(0, photo.getLikes() - 1));
+                photo.setLikedByUserIds(new ArrayList<>());
+                adapter.notifyDataSetChanged();
+                })
+                .addOnFailureListener(error -> Toast.makeText(this, R.string.travelshare_like_failure, Toast.LENGTH_SHORT).show());
+            return;
+        }
+
+        Map<String, Object> likeData = new HashMap<>();
+        likeData.put("userId", currentUserId);
+        likeData.put("timestamp", System.currentTimeMillis());
+        db.collection("photos")
+                .document(photo.getId())
+            .collection("likes")
+            .document(currentUserId)
+            .set(likeData)
+            .addOnSuccessListener(unused -> {
+                List<String> likedByUserIds = new ArrayList<>();
+                likedByUserIds.add(currentUserId);
+                photo.setLikes(photo.getLikes() + 1);
+                photo.setLikedByUserIds(likedByUserIds);
+                adapter.notifyDataSetChanged();
+            })
+                .addOnFailureListener(error -> Toast.makeText(this, R.string.travelshare_like_failure, Toast.LENGTH_SHORT).show());
+    }
+
+    private void editPhoto(Photo photo) {
+        String currentUserId = auth.getUid();
+        if (photo == null || photo.getId() == null || currentUserId == null || !currentUserId.equals(photo.getUserId())) {
+            Toast.makeText(this, R.string.travelshare_edit_not_allowed, Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        startActivity(UploadActivity.createEditIntent(this, photo.getId()));
+    }
+
+    private void openComments(Photo photo) {
+        if (photo == null || photo.getId() == null || photo.getId().trim().isEmpty()) {
+            return;
+        }
+
+        startActivity(CommentThreadActivity.createIntent(this, photo));
     }
 
     private void openPhotoLocation(Photo photo) {

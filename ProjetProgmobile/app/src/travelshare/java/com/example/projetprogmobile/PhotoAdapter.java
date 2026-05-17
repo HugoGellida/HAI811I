@@ -6,8 +6,9 @@ import android.util.Base64;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.Button;
 import android.widget.ImageView;
+import android.widget.ImageButton;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
@@ -25,19 +26,40 @@ public class PhotoAdapter extends RecyclerView.Adapter<PhotoAdapter.ViewHolder> 
         void onOpenLocation(Photo photo);
     }
 
+    public interface OnEditPhotoListener {
+        void onEditPhoto(Photo photo);
+    }
+
+    public interface OnLikePhotoListener {
+        void onLikePhoto(Photo photo);
+    }
+
+    public interface OnCommentPhotoListener {
+        void onCommentPhoto(Photo photo);
+    }
+
     private final List<Photo> photoList;
     private final OnDeletePhotoListener onDeletePhotoListener;
     private final OnOpenLocationListener onOpenLocationListener;
+    private final OnEditPhotoListener onEditPhotoListener;
+    private final OnLikePhotoListener onLikePhotoListener;
+    private final OnCommentPhotoListener onCommentPhotoListener;
     private String currentUserId;
 
     public PhotoAdapter(
             List<Photo> photoList,
             OnDeletePhotoListener onDeletePhotoListener,
-            OnOpenLocationListener onOpenLocationListener
+            OnOpenLocationListener onOpenLocationListener,
+            OnEditPhotoListener onEditPhotoListener,
+            OnLikePhotoListener onLikePhotoListener,
+            OnCommentPhotoListener onCommentPhotoListener
     ) {
         this.photoList = photoList;
         this.onDeletePhotoListener = onDeletePhotoListener;
         this.onOpenLocationListener = onOpenLocationListener;
+        this.onEditPhotoListener = onEditPhotoListener;
+        this.onLikePhotoListener = onLikePhotoListener;
+        this.onCommentPhotoListener = onCommentPhotoListener;
     }
 
     public void setCurrentUserId(String currentUserId) {
@@ -62,7 +84,12 @@ public class PhotoAdapter extends RecyclerView.Adapter<PhotoAdapter.ViewHolder> 
             holder.authorNameView.setText("Voyageur");
             holder.imageView.setImageResource(android.R.drawable.ic_menu_report_image);
             holder.description.setText("");
+            holder.likeButton.setImageResource(R.drawable.ic_heart_outline);
+            holder.likeButton.setContentDescription(holder.itemView.getContext().getString(R.string.travelshare_like_content_description));
+            holder.likeCountView.setText("0");
+            holder.commentCountView.setText("0");
             holder.deleteButton.setVisibility(View.GONE);
+            holder.editButton.setVisibility(View.GONE);
             holder.keywordsView.setVisibility(View.GONE);
             holder.locationView.setVisibility(View.GONE);
             return;
@@ -84,6 +111,20 @@ public class PhotoAdapter extends RecyclerView.Adapter<PhotoAdapter.ViewHolder> 
                 ? view -> onOpenLocationListener.onOpenLocation(photo)
                 : null);
 
+        boolean likedByCurrentUser = photo.isLikedBy(currentUserId);
+        View.OnClickListener likeClickListener = view -> onLikePhotoListener.onLikePhoto(photo);
+        holder.likeButton.setImageResource(likedByCurrentUser ? R.drawable.ic_heart_filled : R.drawable.ic_heart_outline);
+        holder.likeButton.setContentDescription(holder.itemView.getContext().getString(
+                likedByCurrentUser ? R.string.travelshare_unlike_content_description : R.string.travelshare_like_content_description));
+        holder.likeButton.setOnClickListener(likeClickListener);
+        holder.likeAction.setOnClickListener(likeClickListener);
+        holder.likeCountView.setText(String.valueOf(photo.getLikes()));
+
+        View.OnClickListener commentClickListener = view -> onCommentPhotoListener.onCommentPhoto(photo);
+        holder.commentButton.setOnClickListener(commentClickListener);
+        holder.commentAction.setOnClickListener(commentClickListener);
+        holder.commentCountView.setText(String.valueOf(photo.getCommentsCount()));
+
         boolean canDelete = currentUserId != null
                 && currentUserId.equals(photo.getUserId())
                 && photo.getId() != null
@@ -91,6 +132,8 @@ public class PhotoAdapter extends RecyclerView.Adapter<PhotoAdapter.ViewHolder> 
 
         holder.deleteButton.setVisibility(canDelete ? View.VISIBLE : View.GONE);
         holder.deleteButton.setOnClickListener(canDelete ? view -> onDeletePhotoListener.onDeletePhoto(photo) : null);
+        holder.editButton.setVisibility(canDelete ? View.VISIBLE : View.GONE);
+        holder.editButton.setOnClickListener(canDelete ? view -> onEditPhotoListener.onEditPhoto(photo) : null);
 
         String base64 = photo.getImageBase64();
 
@@ -143,7 +186,14 @@ public class PhotoAdapter extends RecyclerView.Adapter<PhotoAdapter.ViewHolder> 
         TextView description;
         TextView keywordsView;
         TextView locationView;
-        Button deleteButton;
+        LinearLayout likeAction;
+        LinearLayout commentAction;
+        ImageButton likeButton;
+        TextView likeCountView;
+        ImageButton commentButton;
+        TextView commentCountView;
+        ImageButton editButton;
+        ImageButton deleteButton;
 
         public ViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -154,6 +204,13 @@ public class PhotoAdapter extends RecyclerView.Adapter<PhotoAdapter.ViewHolder> 
             description = itemView.findViewById(R.id.description);
             keywordsView = itemView.findViewById(R.id.keywords_text);
             locationView = itemView.findViewById(R.id.location_text);
+            likeAction = itemView.findViewById(R.id.like_action);
+            likeButton = itemView.findViewById(R.id.like_button);
+            likeCountView = itemView.findViewById(R.id.like_count_text);
+            commentAction = itemView.findViewById(R.id.comment_action);
+            commentButton = itemView.findViewById(R.id.comment_button);
+            commentCountView = itemView.findViewById(R.id.comment_count_text);
+            editButton = itemView.findViewById(R.id.edit_button);
             deleteButton = itemView.findViewById(R.id.delete_button);
         }
     }

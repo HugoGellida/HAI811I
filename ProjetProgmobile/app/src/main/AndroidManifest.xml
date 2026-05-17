@@ -36,6 +36,7 @@
             android:theme="@style/Theme.ProjetProgMobile" />
         <activity android:name=".ProfileActivity" />
         <activity android:name=".LoginActivity" />
+        <activity android:name=".CommentThreadActivity" />
         <activity android:name=".FeedActivity"/>
         <activity android:name=".RegisterActivity" />
         <activity android:name=".UploadActivity" />

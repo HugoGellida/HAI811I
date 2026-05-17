@@ -1,5 +1,7 @@
 package com.example.projetprogmobile;
 
+import androidx.annotation.Nullable;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -13,10 +15,12 @@ public class Photo {
     private String authorAvatarBase64;
     private String locationName;
     private List<String> keywords;
+    private List<String> likedByUserIds;
     private double latitude;
     private double longitude;
     private long timestamp;
     private int likes;
+    private int commentsCount;
 
     public Photo() {}
 
@@ -97,6 +101,18 @@ public class Photo {
         this.keywords = keywords != null ? new ArrayList<>(keywords) : new ArrayList<>();
     }
 
+    public List<String> getLikedByUserIds() {
+        if (likedByUserIds == null) {
+            likedByUserIds = new ArrayList<>();
+        }
+
+        return likedByUserIds;
+    }
+
+    public void setLikedByUserIds(List<String> likedByUserIds) {
+        this.likedByUserIds = likedByUserIds != null ? new ArrayList<>(likedByUserIds) : new ArrayList<>();
+    }
+
     public double getLatitude() {
         return latitude;
     }
@@ -127,6 +143,14 @@ public class Photo {
 
     public void setLikes(int likes) {
         this.likes = likes;
+    }
+
+    public int getCommentsCount() {
+        return commentsCount;
+    }
+
+    public void setCommentsCount(int commentsCount) {
+        this.commentsCount = commentsCount;
     }
 
     public void like() {
@@ -186,6 +210,20 @@ public class Photo {
 
     public boolean hasAuthorAvatar() {
         return authorAvatarBase64 != null && !authorAvatarBase64.trim().isEmpty();
+    }
+
+    public boolean isLikedBy(@Nullable String userId) {
+        if (userId == null || userId.trim().isEmpty()) {
+            return false;
+        }
+
+        for (String likedUserId : getLikedByUserIds()) {
+            if (userId.equals(likedUserId)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     public boolean matchesTextQuery(String query) {
