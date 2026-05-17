@@ -39,6 +39,6 @@
             android:id="@+id/btnAddTrip"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="@string/travelpath_add_trip" />
+            android:text="@string/travelpath_open_planner" />
     </LinearLayout>
 </FrameLayout>

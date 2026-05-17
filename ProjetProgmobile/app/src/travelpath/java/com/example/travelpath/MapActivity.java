@@ -1,6 +1,8 @@
 package com.example.travelpath;
 
 import com.example.projetprogmobile.R;
+import com.example.travelpath.model.Poi;
+import com.example.travelpath.model.TravelRoute;
 
 import android.content.Context;
 import android.content.Intent;
@@ -19,10 +21,14 @@ import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.LatLngBounds;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.PointOfInterest;
+import com.google.android.gms.maps.model.PolylineOptions;
 import com.google.firebase.auth.FirebaseAuth;
 
+import java.io.Serializable;
+import java.util.List;
 import java.util.Locale;
 
 public class MapActivity extends FragmentActivity implements OnMapReadyCallback {
@@ -34,6 +40,7 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
     public static final String EXTRA_SELECTED_LATITUDE = "com.example.travelpath.extra.SELECTED_LATITUDE";
     public static final String EXTRA_SELECTED_LONGITUDE = "com.example.travelpath.extra.SELECTED_LONGITUDE";
     public static final String EXTRA_SELECTED_LABEL = "com.example.travelpath.extra.SELECTED_LABEL";
+    public static final String EXTRA_GENERATED_ROUTE = "com.example.travelpath.extra.GENERATED_ROUTE";
 
     private static final float DEFAULT_ZOOM = 12f;
 
@@ -44,6 +51,7 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
     private boolean pickMode;
     private LatLng selectedLocation;
     private String selectedLocationName;
+    private TravelRoute generatedRoute;
 
     public static Intent createLocationPickerIntent(
             Context context,
@@ -83,12 +91,19 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
         return intent;
     }
 
+    public static Intent createGeneratedRouteIntent(Context context, @NonNull TravelRoute route) {
+        Intent intent = new Intent(context, MapActivity.class);
+        intent.putExtra(EXTRA_GENERATED_ROUTE, route);
+        return intent;
+    }
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_map);
 
         pickMode = getIntent().getBooleanExtra(EXTRA_PICK_MODE, false);
+        generatedRoute = readGeneratedRoute();
 
         btnAddTrip = findViewById(R.id.btnAddTrip);
         btnAuth = findViewById(R.id.btnAuth);
@@ -105,6 +120,11 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
             return;
         }
 
+        if (generatedRoute != null) {
+            configureGeneratedRouteMode();
+            return;
+        }
+
         configureDefaultMode();
     }
 
@@ -112,7 +132,7 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
     protected void onResume() {
         super.onResume();
 
-        if (!pickMode) {
+        if (!pickMode && generatedRoute == null) {
             updateAuthButton();
         }
     }
@@ -124,6 +144,11 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
         if (pickMode) {
             mMap.setOnPoiClickListener(this::selectPointOfInterest);
             mMap.setOnMapLongClickListener(latLng -> selectLocation(latLng, formatCoordinates(latLng)));
+        }
+
+        if (generatedRoute != null) {
+            showGeneratedRoute(generatedRoute);
+            return;
         }
 
         LatLng focusLocation = readFocusLocation();
@@ -153,7 +178,8 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
     }
 
     private void configureDefaultMode() {
-        btnAddTrip.setOnClickListener(v -> startActivity(new Intent(this, AddTripActivity.class)));
+        btnAddTrip.setText(R.string.travelpath_open_planner);
+        btnAddTrip.setOnClickListener(v -> startActivity(new Intent(this, TravelPathMainActivity.class)));
 
         btnAuth.setOnClickListener(v -> {
             if (FirebaseAuth.getInstance().getCurrentUser() == null) {
@@ -165,6 +191,16 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
         });
 
         updateAuthButton();
+    }
+
+    private void configureGeneratedRouteMode() {
+        btnAuth.setVisibility(View.GONE);
+        btnAddTrip.setText(R.string.travelpath_back_to_search);
+        btnAddTrip.setEnabled(true);
+        btnAddTrip.setAlpha(1f);
+        btnAddTrip.setOnClickListener(v -> finish());
+        mapHintView.setVisibility(View.VISIBLE);
+        mapHintView.setText(R.string.travelpath_route_map_loading);
     }
 
     private void configurePickerMode() {
@@ -217,6 +253,43 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
         mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng, DEFAULT_ZOOM));
     }
 
+    private void showGeneratedRoute(@NonNull TravelRoute route) {
+        List<Poi> routeStops = route.getStops();
+        if (routeStops.isEmpty()) {
+            mapHintView.setVisibility(View.VISIBLE);
+            mapHintView.setText(R.string.travelpath_route_map_empty);
+            return;
+        }
+
+        mMap.clear();
+
+        LatLngBounds.Builder boundsBuilder = new LatLngBounds.Builder();
+        PolylineOptions polylineOptions = new PolylineOptions().color(0xFF1565C0).width(8f);
+        Poi firstStop = routeStops.get(0);
+
+        for (int index = 0; index < routeStops.size(); index++) {
+            Poi stop = routeStops.get(index);
+            LatLng position = new LatLng(stop.getLatitude(), stop.getLongitude());
+            boundsBuilder.include(position);
+            polylineOptions.add(position);
+            mMap.addMarker(new MarkerOptions()
+                    .position(position)
+                    .title((index + 1) + ". " + stop.getDisplayName())
+                    .snippet(stop.getDescription()));
+        }
+
+        if (routeStops.size() > 1) {
+            mMap.addPolyline(polylineOptions);
+            mMap.moveCamera(CameraUpdateFactory.newLatLngBounds(boundsBuilder.build(), 140));
+        } else {
+            LatLng singlePosition = new LatLng(firstStop.getLatitude(), firstStop.getLongitude());
+            mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(singlePosition, DEFAULT_ZOOM));
+        }
+
+        mapHintView.setVisibility(View.VISIBLE);
+        mapHintView.setText(getString(R.string.travelpath_route_map_summary, route.getTitle(), route.getSummary()));
+    }
+
     private void showViewingHint(String label) {
         mapHintView.setVisibility(View.VISIBLE);
         mapHintView.setText(getString(R.string.travelpath_viewing_place, label));
@@ -255,6 +328,16 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
     @Nullable
     private String readFocusLabel() {
         return getIntent().getStringExtra(EXTRA_FOCUS_LABEL);
+    }
+
+    @Nullable
+    private TravelRoute readGeneratedRoute() {
+        Serializable serializedRoute = getIntent().getSerializableExtra(EXTRA_GENERATED_ROUTE);
+        if (serializedRoute instanceof TravelRoute) {
+            return (TravelRoute) serializedRoute;
+        }
+
+        return null;
     }
 
     private String resolveLabel(@Nullable String label, LatLng latLng) {

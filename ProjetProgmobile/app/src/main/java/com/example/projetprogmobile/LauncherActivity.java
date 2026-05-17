@@ -6,7 +6,7 @@ import android.widget.Button;
 
 import androidx.appcompat.app.AppCompatActivity;
 
-import com.example.travelpath.MapActivity;
+import com.example.travelpath.TravelPathMainActivity;
 
 public class LauncherActivity extends AppCompatActivity {
 
@@ -26,7 +26,7 @@ public class LauncherActivity extends AppCompatActivity {
         });
 
         travelPathButton.setOnClickListener(v -> {
-            startActivity(new Intent(this, MapActivity.class));
+            startActivity(new Intent(this, TravelPathMainActivity.class));
         });
     }
 }

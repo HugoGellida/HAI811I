@@ -29,10 +29,10 @@
             </intent-filter>
         </activity>
         <activity
-            android:name="com.example.travelpath.MapActivity"
+            android:name="com.example.travelpath.TravelPathMainActivity"
             android:theme="@style/Theme.ProjetProgMobile" />
         <activity
-            android:name="com.example.travelpath.AddTripActivity"
+            android:name="com.example.travelpath.MapActivity"
             android:theme="@style/Theme.ProjetProgMobile" />
         <activity android:name=".LoginActivity" />
         <activity android:name=".FeedActivity"/>

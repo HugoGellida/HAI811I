@@ -6,6 +6,7 @@ import android.content.Intent;
 import androidx.annotation.Nullable;
 
 import com.example.travelpath.MapActivity;
+import com.example.travelpath.TravelPathMainActivity;
 
 public final class FeatureNavigation {
 
@@ -24,7 +25,7 @@ public final class FeatureNavigation {
 
     public static Intent createPostAuthIntent(Context context, @Nullable String destination) {
         if (DESTINATION_TRAVEL_PATH.equals(resolveDestination(destination))) {
-            return new Intent(context, MapActivity.class);
+            return new Intent(context, TravelPathMainActivity.class);
         }
 
         return new Intent(context, FeedActivity.class);
