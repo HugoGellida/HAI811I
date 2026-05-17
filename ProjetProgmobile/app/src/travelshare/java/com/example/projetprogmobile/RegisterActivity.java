@@ -31,7 +31,8 @@ public class RegisterActivity extends AppCompatActivity {
         registerBtn.setOnClickListener(v -> registerUser());
 
         goToLoginBtn.setOnClickListener(v -> {
-            startActivity(new Intent(this, LoginActivity.class));
+            startActivity(FeatureNavigation.createLoginIntent(this, FeatureNavigation.resolveDestination(getIntent())));
+            finish();
         });
     }
 
@@ -53,7 +54,8 @@ public class RegisterActivity extends AppCompatActivity {
                 .addOnCompleteListener(task -> {
                     if(task.isSuccessful()) {
                         Toast.makeText(this, "Compte créé !", Toast.LENGTH_SHORT).show();
-                        startActivity(new Intent(this, LoginActivity.class));
+                        startActivity(FeatureNavigation.createPostAuthIntent(this, FeatureNavigation.resolveDestination(getIntent())));
+                        finish();
                     } else {
                         Toast.makeText(this, "Erreur: " + task.getException().getMessage(), Toast.LENGTH_LONG).show();
                     }

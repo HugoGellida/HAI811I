@@ -8,6 +8,13 @@ android {
     namespace 'com.example.projetprogmobile'
     compileSdk 36
 
+    sourceSets {
+        main {
+            java.srcDirs += ['src/travelshare/java', 'src/travelpath/java']
+            res.srcDirs += ['src/travelshare/res', 'src/travelpath/res']
+        }
+    }
+
     defaultConfig {
         applicationId "com.example.projetprogmobile"
         minSdk 24
@@ -26,17 +33,21 @@ android {
     }
 
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_11
-        targetCompatibility JavaVersion.VERSION_11
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
     }
 
     kotlinOptions {
-        jvmTarget = '11'
+        jvmTarget = '17'
     }
 
     buildFeatures {
         viewBinding true
     }
+}
+
+kotlin {
+    jvmToolchain(17)
 }
 
 dependencies {
@@ -57,7 +68,7 @@ dependencies {
 
     implementation 'androidx.recyclerview:recyclerview:1.3.2'
     implementation 'com.squareup.picasso:picasso:2.8'
-    implementation 'com.google.android.gms:play-services-maps:18.2.0'
+    implementation 'com.google.android.gms:play-services-maps:20.0.0'
 
     testImplementation 'junit:junit:4.13.2'
     androidTestImplementation 'androidx.test.ext:junit:1.1.5'

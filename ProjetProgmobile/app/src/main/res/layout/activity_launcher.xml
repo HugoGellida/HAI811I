@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:gravity="center"
+    android:orientation="vertical"
+    android:padding="24dp">
+
+    <TextView
+        android:id="@+id/text_launcher_title"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="8dp"
+        android:text="@string/launcher_title"
+        android:textAppearance="@style/TextAppearance.Material3.HeadlineMedium" />
+
+    <TextView
+        android:id="@+id/text_launcher_subtitle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="32dp"
+        android:gravity="center"
+        android:text="@string/launcher_subtitle"
+        android:textAlignment="center"
+        android:textAppearance="@style/TextAppearance.Material3.BodyLarge" />
+
+    <Button
+        android:id="@+id/button_open_travelshare"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="12dp"
+        android:text="@string/launcher_travelshare" />
+
+    <Button
+        android:id="@+id/button_open_travelpath"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/launcher_travelpath" />
+
+</LinearLayout>

@@ -1,0 +1,15 @@
+<resources>
+    <string name="travelpath_add_trip">Ajouter un trajet</string>
+    <string name="travelpath_add_trip_confirm">Ajouter</string>
+    <string name="travelpath_open_travelshare">Ouvrir TravelShare</string>
+    <string name="travelpath_pick_cancel">Annuler</string>
+    <string name="travelpath_pick_confirm">Choisir ce lieu</string>
+    <string name="travelpath_pick_hint">Touchez un point d interet ou faites un appui long pour choisir un lieu.</string>
+    <string name="travelpath_pick_selected">Lieu selectionne : %1$s</string>
+    <string name="travelpath_sign_in">Se connecter</string>
+    <string name="travelpath_start_marker">TravelPath Start</string>
+    <string name="travelpath_trip_added">Trajet ajoute : %1$s</string>
+    <string name="travelpath_trip_name_hint">Nom du trajet</string>
+    <string name="travelpath_trip_title_required">Titre obligatoire</string>
+    <string name="travelpath_viewing_place">Lieu du post : %1$s</string>
+</resources>

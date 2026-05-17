@@ -9,44 +9,70 @@ import android.util.Base64;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageView;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 
+import com.example.travelpath.MapActivity;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.StorageReference;
 
 import java.io.ByteArrayOutputStream;
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 public class UploadActivity extends AppCompatActivity {
 
     private ImageView imageView;
-    Button selectBtn, uploadBtn;
-    EditText description;
+    private Button selectBtn;
+    private Button selectLocationBtn;
+    private Button uploadBtn;
+    private EditText description;
+    private EditText keywordsInput;
+    private TextView locationValue;
     private Uri imageUri;
+    private double selectedLatitude;
+    private double selectedLongitude;
+    private String selectedLocationName;
 
     private FirebaseStorage storage;
     private FirebaseFirestore db;
 
     private static final int PICK_IMAGE = 1;
+    private static final int PICK_LOCATION = 2;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        if (FirebaseAuth.getInstance().getCurrentUser() == null) {
+            Toast.makeText(this, R.string.travelshare_post_requires_auth, Toast.LENGTH_SHORT).show();
+            startActivity(FeatureNavigation.createPostAuthIntent(this, FeatureNavigation.DESTINATION_TRAVEL_SHARE));
+            finish();
+            return;
+        }
+
         setContentView(R.layout.activity_upload);
 
         imageView = findViewById(R.id.imageView);
         selectBtn = findViewById(R.id.selectBtn);
+        selectLocationBtn = findViewById(R.id.selectLocationBtn);
         uploadBtn = findViewById(R.id.uploadBtn);
         description = findViewById(R.id.description);
+        keywordsInput = findViewById(R.id.keywordsInput);
+        locationValue = findViewById(R.id.locationValue);
 
         storage = FirebaseStorage.getInstance();
         db = FirebaseFirestore.getInstance();
 
         selectBtn.setOnClickListener(v -> selectImage());
+        selectLocationBtn.setOnClickListener(v -> openLocationPicker());
 
         uploadBtn.setOnClickListener(v -> {
             if (imageUri != null) {
@@ -55,6 +81,8 @@ public class UploadActivity extends AppCompatActivity {
                 Toast.makeText(this, "Choisis une image", Toast.LENGTH_SHORT).show();
             }
         });
+
+        updateSelectedLocationUi();
     }
 
     private void selectImage() {
@@ -67,10 +95,30 @@ public class UploadActivity extends AppCompatActivity {
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
 
+        if (requestCode == PICK_LOCATION) {
+            if (resultCode == RESULT_OK && data != null) {
+                selectedLatitude = data.getDoubleExtra(MapActivity.EXTRA_SELECTED_LATITUDE, 0d);
+                selectedLongitude = data.getDoubleExtra(MapActivity.EXTRA_SELECTED_LONGITUDE, 0d);
+                selectedLocationName = data.getStringExtra(MapActivity.EXTRA_SELECTED_LABEL);
+                updateSelectedLocationUi();
+            }
+            return;
+        }
+
         if (requestCode == PICK_IMAGE && resultCode == RESULT_OK && data != null) {
             imageUri = data.getData();
             imageView.setImageURI(imageUri);
         }
+    }
+
+    private void openLocationPicker() {
+        startActivityForResult(
+                MapActivity.createLocationPickerIntent(
+                        this,
+                        selectedLocationName != null ? selectedLatitude : null,
+                        selectedLocationName != null ? selectedLongitude : null,
+                        selectedLocationName),
+                PICK_LOCATION);
     }
 
     private String imageToBase64(Uri uri) {
@@ -110,6 +158,11 @@ public class UploadActivity extends AppCompatActivity {
 
     private void uploadImage() {
 
+        if (FirebaseAuth.getInstance().getCurrentUser() == null) {
+            Toast.makeText(this, R.string.travelshare_post_requires_auth, Toast.LENGTH_SHORT).show();
+            return;
+        }
+
         String base64Image = imageToBase64(imageUri);
 
         if (base64Image == null) {
@@ -125,9 +178,42 @@ public class UploadActivity extends AppCompatActivity {
                 FirebaseAuth.getInstance().getUid()
         );
 
+        if (selectedLocationName != null && !selectedLocationName.trim().isEmpty()) {
+            photo.setLatitude(selectedLatitude);
+            photo.setLongitude(selectedLongitude);
+            photo.setLocationName(selectedLocationName);
+        }
+
+        photo.setKeywords(parseKeywords());
+
         db.collection("photos").add(photo);
 
         Toast.makeText(this, "Upload réussi", Toast.LENGTH_SHORT).show();
         finish();
+    }
+
+    private void updateSelectedLocationUi() {
+        boolean hasLocation = selectedLocationName != null && !selectedLocationName.trim().isEmpty();
+
+        locationValue.setText(hasLocation
+                ? getString(R.string.travelshare_location_selected, selectedLocationName)
+                : getString(R.string.travelshare_location_none));
+        selectLocationBtn.setText(hasLocation
+                ? R.string.travelshare_location_change
+                : R.string.travelshare_location_tag);
+    }
+
+    private List<String> parseKeywords() {
+        Set<String> uniqueKeywords = new LinkedHashSet<>();
+        String rawKeywords = keywordsInput.getText().toString();
+
+        for (String value : rawKeywords.split("[,;]")) {
+            String keyword = value.trim();
+            if (!keyword.isEmpty()) {
+                uniqueKeywords.add(keyword);
+            }
+        }
+
+        return new ArrayList<>(uniqueKeywords);
     }
 }

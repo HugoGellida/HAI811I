@@ -29,6 +29,27 @@
         android:hint="Description de la photo"
         android:layout_marginTop="10dp"/>
 
+    <EditText
+        android:id="@+id/keywordsInput"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:hint="@string/travelshare_keywords_hint" />
+
+    <TextView
+        android:id="@+id/locationValue"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:text="@string/travelshare_location_none" />
+
+    <Button
+        android:id="@+id/selectLocationBtn"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:text="@string/travelshare_location_tag" />
+
     <!-- Bouton upload -->
     <Button
         android:id="@+id/uploadBtn"

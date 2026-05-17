@@ -13,16 +13,35 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.squareup.picasso.Picasso;
-
 import java.util.List;
 
 public class PhotoAdapter extends RecyclerView.Adapter<PhotoAdapter.ViewHolder> {
 
-    private List<Photo> photoList;
+    public interface OnDeletePhotoListener {
+        void onDeletePhoto(Photo photo);
+    }
 
-    public PhotoAdapter(List<Photo> photoList) {
+    public interface OnOpenLocationListener {
+        void onOpenLocation(Photo photo);
+    }
+
+    private final List<Photo> photoList;
+    private final OnDeletePhotoListener onDeletePhotoListener;
+    private final OnOpenLocationListener onOpenLocationListener;
+    private String currentUserId;
+
+    public PhotoAdapter(
+            List<Photo> photoList,
+            OnDeletePhotoListener onDeletePhotoListener,
+            OnOpenLocationListener onOpenLocationListener
+    ) {
         this.photoList = photoList;
+        this.onDeletePhotoListener = onDeletePhotoListener;
+        this.onOpenLocationListener = onOpenLocationListener;
+    }
+
+    public void setCurrentUserId(String currentUserId) {
+        this.currentUserId = currentUserId;
     }
 
     @NonNull
@@ -40,10 +59,33 @@ public class PhotoAdapter extends RecyclerView.Adapter<PhotoAdapter.ViewHolder> 
 
         if (photo == null) {
             holder.imageView.setImageResource(android.R.drawable.ic_menu_report_image);
+            holder.description.setText("");
+            holder.deleteButton.setVisibility(View.GONE);
+            holder.keywordsView.setVisibility(View.GONE);
+            holder.locationView.setVisibility(View.GONE);
             return;
         }
 
         holder.description.setText(photo.getDescription() != null ? photo.getDescription() : "");
+
+        boolean hasKeywords = photo.hasKeywords();
+        holder.keywordsView.setVisibility(hasKeywords ? View.VISIBLE : View.GONE);
+        holder.keywordsView.setText(hasKeywords ? photo.getDisplayKeywords() : "");
+
+        boolean hasLocation = photo.hasTaggedLocation();
+        holder.locationView.setVisibility(hasLocation ? View.VISIBLE : View.GONE);
+        holder.locationView.setText(hasLocation ? photo.getDisplayLocationName() : "");
+        holder.locationView.setOnClickListener(hasLocation
+                ? view -> onOpenLocationListener.onOpenLocation(photo)
+                : null);
+
+        boolean canDelete = currentUserId != null
+                && currentUserId.equals(photo.getUserId())
+                && photo.getId() != null
+                && !photo.getId().trim().isEmpty();
+
+        holder.deleteButton.setVisibility(canDelete ? View.VISIBLE : View.GONE);
+        holder.deleteButton.setOnClickListener(canDelete ? view -> onDeletePhotoListener.onDeletePhoto(photo) : null);
 
         String base64 = photo.getImageBase64();
 
@@ -92,12 +134,18 @@ public class PhotoAdapter extends RecyclerView.Adapter<PhotoAdapter.ViewHolder> 
 
         ImageView imageView;
         TextView description;
+        TextView keywordsView;
+        TextView locationView;
+        Button deleteButton;
 
         public ViewHolder(@NonNull View itemView) {
             super(itemView);
 
             imageView = itemView.findViewById(R.id.imageView);
             description = itemView.findViewById(R.id.description);
+            keywordsView = itemView.findViewById(R.id.keywords_text);
+            locationView = itemView.findViewById(R.id.location_text);
+            deleteButton = itemView.findViewById(R.id.delete_button);
         }
     }
 }

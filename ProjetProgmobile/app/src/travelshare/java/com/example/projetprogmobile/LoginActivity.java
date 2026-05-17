@@ -20,9 +20,16 @@ public class LoginActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_login);
 
         auth = FirebaseAuth.getInstance();
+
+        if (auth.getCurrentUser() != null) {
+            startActivity(FeatureNavigation.createPostAuthIntent(this, FeatureNavigation.resolveDestination(getIntent())));
+            finish();
+            return;
+        }
+
+        setContentView(R.layout.activity_login);
 
         email = findViewById(R.id.email);
         password = findViewById(R.id.password);
@@ -31,7 +38,9 @@ public class LoginActivity extends AppCompatActivity {
 
         loginBtn.setOnClickListener(v -> loginUser());
         goToRegisterBtn.setOnClickListener(v -> {
-            startActivity(new Intent(this, RegisterActivity.class));
+            Intent intent = new Intent(this, RegisterActivity.class);
+            intent.putExtra(FeatureNavigation.EXTRA_DESTINATION, FeatureNavigation.resolveDestination(getIntent()));
+            startActivity(intent);
         });
     }
 
@@ -42,7 +51,8 @@ public class LoginActivity extends AppCompatActivity {
         auth.signInWithEmailAndPassword(mail, pass)
                 .addOnCompleteListener(task -> {
                     if(task.isSuccessful()) {
-                        startActivity(new Intent(this, FeedActivity.class));
+                        startActivity(FeatureNavigation.createPostAuthIntent(this, FeatureNavigation.resolveDestination(getIntent())));
+                        finish();
                     } else {
                         Toast.makeText(this, "Erreur login", Toast.LENGTH_SHORT).show();
                     }
