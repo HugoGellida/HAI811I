@@ -49,6 +49,28 @@ public class RouteGeneratorTest {
     }
 
     @Test
+    public void generateRoutes_requiresAllRequestedPlacesWhenMultipleProvided() {
+        RouteSearchCriteria criteria = new RouteSearchCriteria();
+        criteria.setMaxBudgetEuros(40);
+        criteria.setAvailableDurationMinutes(240);
+        criteria.setPlaceToInclude("Mirabeau, Granet");
+
+        List<TravelRoute> routes = generator.generateRoutes(buildSamplePois(), criteria);
+
+        assertFalse(routes.isEmpty());
+        for (TravelRoute route : routes) {
+            boolean hasMirabeau = false;
+            boolean hasGranet = false;
+            for (Poi stop : route.getStops()) {
+                hasMirabeau = hasMirabeau || stop.matchesPlace("Mirabeau");
+                hasGranet = hasGranet || stop.matchesPlace("Granet");
+            }
+            assertTrue(hasMirabeau);
+            assertTrue(hasGranet);
+        }
+    }
+
+    @Test
     public void generateRoutes_relaxedEffortKeepsAccessibleStops() {
         RouteSearchCriteria criteria = new RouteSearchCriteria();
         criteria.setMaxBudgetEuros(30);

@@ -19,6 +19,8 @@ import android.graphics.Path;
 import android.graphics.RectF;
 import android.graphics.Shader;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.util.Base64;
 import android.util.Log;
 import android.view.View;
@@ -50,6 +52,8 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class MapActivity extends FragmentActivity implements OnMapReadyCallback {
 
@@ -77,6 +81,9 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
     private ListenerRegistration taggedPhotosRegistration;
     private final List<Photo> taggedTravelSharePhotos = new ArrayList<>();
     private final List<Marker> taggedPhotoMarkers = new ArrayList<>();
+    private final RoadRouteService roadRouteService = new RoadRouteService();
+    private final ExecutorService roadRouteExecutor = Executors.newSingleThreadExecutor();
+    private final Handler mainHandler = new Handler(Looper.getMainLooper());
 
     public static Intent createLocationPickerIntent(
             Context context,
@@ -171,6 +178,12 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
     protected void onStop() {
         super.onStop();
         detachTaggedPhotosListener();
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        roadRouteExecutor.shutdownNow();
     }
 
     @Override
@@ -306,14 +319,14 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
         taggedPhotoMarkers.clear();
 
         LatLngBounds.Builder boundsBuilder = new LatLngBounds.Builder();
-        PolylineOptions polylineOptions = new PolylineOptions().color(0xFF1565C0).width(8f);
+        List<LatLng> stopPositions = new ArrayList<>();
         Poi firstStop = routeStops.get(0);
 
         for (int index = 0; index < routeStops.size(); index++) {
             Poi stop = routeStops.get(index);
             LatLng position = new LatLng(stop.getLatitude(), stop.getLongitude());
             boundsBuilder.include(position);
-            polylineOptions.add(position);
+            stopPositions.add(position);
             mMap.addMarker(new MarkerOptions()
                     .position(position)
                     .title((index + 1) + ". " + stop.getDisplayName())
@@ -321,16 +334,44 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
         }
 
         if (routeStops.size() > 1) {
-            mMap.addPolyline(polylineOptions);
             mMap.moveCamera(CameraUpdateFactory.newLatLngBounds(boundsBuilder.build(), 140));
+            loadRoadPolyline(stopPositions, route);
         } else {
             LatLng singlePosition = new LatLng(firstStop.getLatitude(), firstStop.getLongitude());
             mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(singlePosition, DEFAULT_ZOOM));
+            mapHintView.setVisibility(View.VISIBLE);
+            mapHintView.setText(getString(R.string.travelpath_route_map_summary, route.getTitle(), route.getSummary()));
+        }
+        renderTaggedTravelSharePhotoMarkers();
+    }
+
+    private void loadRoadPolyline(@NonNull List<LatLng> stopPositions, @NonNull TravelRoute route) {
+        mapHintView.setVisibility(View.VISIBLE);
+        mapHintView.setText(getString(R.string.travelpath_route_map_summary_loading, route.getTitle(), route.getSummary()));
+
+        roadRouteExecutor.execute(() -> {
+            try {
+                List<LatLng> roadPath = roadRouteService.fetchRoadPath(stopPositions);
+                mainHandler.post(() -> renderRoadPolyline(roadPath, route));
+            } catch (Exception error) {
+                Log.e(TAG, "Impossible de charger un trajet par les rues.", error);
+                mainHandler.post(() -> mapHintView.setText(
+                        getString(R.string.travelpath_route_map_summary_error, route.getTitle(), route.getSummary())));
+            }
+        });
+    }
+
+    private void renderRoadPolyline(@NonNull List<LatLng> roadPath, @NonNull TravelRoute route) {
+        if (mMap == null || roadPath.isEmpty()) {
+            mapHintView.setText(getString(R.string.travelpath_route_map_summary_error, route.getTitle(), route.getSummary()));
+            return;
         }
 
-        mapHintView.setVisibility(View.VISIBLE);
+        mMap.addPolyline(new PolylineOptions()
+                .color(0xFF1565C0)
+                .width(8f)
+                .addAll(roadPath));
         mapHintView.setText(getString(R.string.travelpath_route_map_summary, route.getTitle(), route.getSummary()));
-        renderTaggedTravelSharePhotoMarkers();
     }
 
     private void attachTaggedPhotosListener() {

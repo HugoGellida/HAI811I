@@ -56,7 +56,7 @@
             android:text="@string/travelpath_search_place_label"
             android:textAppearance="@style/TextAppearance.Material3.LabelLarge" />
 
-        <AutoCompleteTextView
+        <MultiAutoCompleteTextView
             android:id="@+id/travelpath_place_input"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"

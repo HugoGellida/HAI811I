@@ -12,8 +12,8 @@
     <string name="travelpath_search_budget_required">Entrez un budget maximum.</string>
     <string name="travelpath_search_budget_invalid">Le budget doit etre un nombre positif.</string>
     <string name="travelpath_search_activity_label">Activite souhaitee</string>
-    <string name="travelpath_search_place_label">Lieu a inclure</string>
-    <string name="travelpath_search_place_hint">Exemple : Musee Granet ou Cours Mirabeau</string>
+    <string name="travelpath_search_place_label">Lieu(x) a inclure</string>
+    <string name="travelpath_search_place_hint">Exemple : Musee Granet, Cours Mirabeau</string>
     <string name="travelpath_search_duration_label">Duree disponible</string>
     <string name="travelpath_search_effort_label">Niveau d efforts</string>
     <string name="travelpath_search_outdoor_label">Sortie en exterieur</string>
@@ -47,6 +47,8 @@
     <string name="travelpath_route_map_loading">Chargement du trajet sur la carte...</string>
     <string name="travelpath_route_map_empty">Aucun arret disponible pour ce trajet.</string>
     <string name="travelpath_route_map_summary">%1$s\n%2$s</string>
+    <string name="travelpath_route_map_summary_loading">%1$s\n%2$s\nTracet routier en cours...</string>
+    <string name="travelpath_route_map_summary_error">%1$s\n%2$s\nImpossible de charger le trajet par les rues.</string>
     <string name="travelpath_route_card_meta">%1$s  |  %2$s  |  %3$s</string>
     <string name="travelpath_route_map_button">Voir sur la carte</string>
     <string name="travelpath_route_save">Enregistrer</string>

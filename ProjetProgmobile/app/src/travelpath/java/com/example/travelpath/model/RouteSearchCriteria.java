@@ -1,6 +1,10 @@
 package com.example.travelpath.model;
 
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 
 public class RouteSearchCriteria {
 
@@ -65,7 +69,7 @@ public class RouteSearchCriteria {
     }
 
     public boolean hasPlaceToInclude() {
-        return !normalize(placeToInclude).isEmpty();
+        return !getNormalizedRequestedPlaces().isEmpty();
     }
 
     public String getNormalizedActivityCategory() {
@@ -74,6 +78,34 @@ public class RouteSearchCriteria {
 
     public String getNormalizedPlaceToInclude() {
         return normalize(placeToInclude);
+    }
+
+    public List<String> getRequestedPlaces() {
+        Set<String> requestedPlaces = new LinkedHashSet<>();
+        if (placeToInclude == null) {
+            return new ArrayList<>();
+        }
+
+        for (String rawPart : placeToInclude.split(",")) {
+            String trimmedPart = rawPart == null ? "" : rawPart.trim();
+            if (!trimmedPart.isEmpty()) {
+                requestedPlaces.add(trimmedPart);
+            }
+        }
+
+        return new ArrayList<>(requestedPlaces);
+    }
+
+    public List<String> getNormalizedRequestedPlaces() {
+        List<String> normalizedPlaces = new ArrayList<>();
+        for (String requestedPlace : getRequestedPlaces()) {
+            String normalizedPlace = normalize(requestedPlace);
+            if (!normalizedPlace.isEmpty()) {
+                normalizedPlaces.add(normalizedPlace);
+            }
+        }
+
+        return normalizedPlaces;
     }
 
     private String normalize(String value) {

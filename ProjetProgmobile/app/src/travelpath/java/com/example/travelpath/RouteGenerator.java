@@ -5,10 +5,13 @@ import com.example.travelpath.model.Poi;
 import com.example.travelpath.model.RouteSearchCriteria;
 import com.example.travelpath.model.TravelRoute;
 
+import androidx.annotation.Nullable;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
@@ -27,6 +30,7 @@ public class RouteGenerator {
 
         RouteSearchCriteria safeCriteria = criteria == null ? new RouteSearchCriteria() : criteria;
         List<Poi> filteredPois = filterCandidates(allPois, safeCriteria);
+        List<String> requestedPlaces = safeCriteria.getRequestedPlaces();
 
         if (filteredPois.isEmpty()) {
             return Collections.emptyList();
@@ -38,12 +42,12 @@ public class RouteGenerator {
                 continue;
             }
 
-            if (!safeCriteria.hasPlaceToInclude() || poi.matchesPlace(safeCriteria.getPlaceToInclude())) {
+            if (requestedPlaces.isEmpty() || matchesAnyRequestedPlace(poi, requestedPlaces)) {
                 seeds.add(poi);
             }
         }
 
-        if (safeCriteria.hasPlaceToInclude() && seeds.isEmpty()) {
+        if (!requestedPlaces.isEmpty() && seeds.isEmpty()) {
             return Collections.emptyList();
         }
 
@@ -128,6 +132,7 @@ public class RouteGenerator {
         int remainingDuration = criteria.getAvailableDurationMinutes() > 0
                 ? criteria.getAvailableDurationMinutes()
                 : Integer.MAX_VALUE;
+        int maxRouteStops = Math.max(MAX_ROUTE_STOPS, criteria.getRequestedPlaces().size());
 
         if (!canAdd(seed, remainingBudget, remainingDuration)) {
             return null;
@@ -139,7 +144,7 @@ public class RouteGenerator {
         remainingDuration -= seed.getDurationMinutes();
 
         Poi currentStop = seed;
-        while (routeStops.size() < MAX_ROUTE_STOPS) {
+        while (routeStops.size() < maxRouteStops) {
             Poi nextStop = selectNextStop(currentStop, candidates, usedIds, remainingBudget, remainingDuration, criteria);
             if (nextStop == null) {
                 break;
@@ -152,18 +157,8 @@ public class RouteGenerator {
             currentStop = nextStop;
         }
 
-        if (criteria.hasPlaceToInclude()) {
-            boolean includedRequestedPlace = false;
-            for (Poi stop : routeStops) {
-                if (stop.matchesPlace(criteria.getPlaceToInclude())) {
-                    includedRequestedPlace = true;
-                    break;
-                }
-            }
-
-            if (!includedRequestedPlace) {
+        if (!coversAllRequestedPlaces(routeStops, criteria.getRequestedPlaces())) {
                 return null;
-            }
         }
 
         return toRoute(routeStops, criteria);
@@ -177,6 +172,32 @@ public class RouteGenerator {
             int remainingDuration,
             RouteSearchCriteria criteria
     ) {
+        Set<String> remainingRequestedPlaces = remainingRequestedPlaces(criteria, usedIds, candidates);
+        Poi bestRequestedCandidate = selectBestCandidate(
+                currentStop,
+                candidates,
+                usedIds,
+                remainingBudget,
+                remainingDuration,
+                criteria,
+                remainingRequestedPlaces.isEmpty() ? null : remainingRequestedPlaces);
+        if (bestRequestedCandidate != null) {
+            return bestRequestedCandidate;
+        }
+
+        return selectBestCandidate(currentStop, candidates, usedIds, remainingBudget, remainingDuration, criteria, null);
+    }
+
+    @Nullable
+    private Poi selectBestCandidate(
+            Poi currentStop,
+            List<Poi> candidates,
+            Set<String> usedIds,
+            int remainingBudget,
+            int remainingDuration,
+            RouteSearchCriteria criteria,
+            @Nullable Set<String> requiredPlaces
+    ) {
         Poi bestCandidate = null;
         double bestScore = Double.NEGATIVE_INFINITY;
 
@@ -186,6 +207,10 @@ public class RouteGenerator {
             }
 
             if (!canAdd(candidate, remainingBudget, remainingDuration)) {
+                continue;
+            }
+
+            if (requiredPlaces != null && !requiredPlaces.isEmpty() && !matchesAnyRequestedPlace(candidate, requiredPlaces)) {
                 continue;
             }
 
@@ -305,8 +330,8 @@ public class RouteGenerator {
     private double scoreSeed(Poi poi, RouteSearchCriteria criteria) {
         double score = 0d;
 
-        if (criteria.hasPlaceToInclude() && poi.matchesPlace(criteria.getPlaceToInclude())) {
-            score += 45d;
+        if (criteria.hasPlaceToInclude()) {
+            score += 45d * countRequestedPlaceMatches(poi, criteria.getRequestedPlaces());
         }
 
         if (criteria.hasActivityCategory() && normalize(poi.getActivityCategory()).equals(criteria.getNormalizedActivityCategory())) {
@@ -330,6 +355,86 @@ public class RouteGenerator {
         score += Math.max(0d, 8d - (poi.getDurationMinutes() / 30d));
         score -= distanceFromAix(poi) * 0.8d;
         return score;
+    }
+
+    private int countRequestedPlaceMatches(@Nullable Poi poi, List<String> requestedPlaces) {
+        if (poi == null || requestedPlaces == null || requestedPlaces.isEmpty()) {
+            return 0;
+        }
+
+        int matches = 0;
+        for (String requestedPlace : requestedPlaces) {
+            if (poi.matchesPlace(requestedPlace)) {
+                matches++;
+            }
+        }
+
+        return matches;
+    }
+
+    private boolean matchesAnyRequestedPlace(@Nullable Poi poi, Iterable<String> requestedPlaces) {
+        if (poi == null || requestedPlaces == null) {
+            return false;
+        }
+
+        for (String requestedPlace : requestedPlaces) {
+            if (poi.matchesPlace(requestedPlace)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private boolean coversAllRequestedPlaces(List<Poi> routeStops, List<String> requestedPlaces) {
+        if (requestedPlaces == null || requestedPlaces.isEmpty()) {
+            return true;
+        }
+
+        Set<String> coveredPlaces = new LinkedHashSet<>();
+        for (Poi stop : routeStops) {
+            for (String requestedPlace : requestedPlaces) {
+                if (stop != null && stop.matchesPlace(requestedPlace)) {
+                    coveredPlaces.add(normalize(requestedPlace));
+                }
+            }
+        }
+
+        for (String requestedPlace : requestedPlaces) {
+            if (!coveredPlaces.contains(normalize(requestedPlace))) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private Set<String> remainingRequestedPlaces(
+            RouteSearchCriteria criteria,
+            Set<String> usedIds,
+            List<Poi> candidates
+    ) {
+        Set<String> remainingPlaces = new LinkedHashSet<>();
+        for (String requestedPlace : criteria.getRequestedPlaces()) {
+            remainingPlaces.add(requestedPlace);
+        }
+
+        if (remainingPlaces.isEmpty()) {
+            return remainingPlaces;
+        }
+
+        for (Poi candidate : candidates) {
+            if (candidate == null || !usedIds.contains(candidate.getId())) {
+                continue;
+            }
+
+            remainingPlaces.removeIf(candidate::matchesPlace);
+            if (remainingPlaces.isEmpty()) {
+                break;
+            }
+        }
+
+        return remainingPlaces;
     }
 
     private double distanceFromAix(Poi poi) {

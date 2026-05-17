@@ -13,9 +13,9 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
-import android.widget.AutoCompleteTextView;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.MultiAutoCompleteTextView;
 import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -45,7 +45,7 @@ public class TravelPathSearchFragment extends Fragment {
     private RecyclerView routesRecyclerView;
     private RouteAdapter routeAdapter;
     private EditText budgetInput;
-    private AutoCompleteTextView placeInput;
+    private MultiAutoCompleteTextView placeInput;
     private Spinner activitySpinner;
     private Spinner durationSpinner;
     private Spinner effortSpinner;
@@ -170,6 +170,7 @@ public class TravelPathSearchFragment extends Fragment {
                 android.R.layout.simple_dropdown_item_1line,
                 poiRepository.loadPlaceSuggestions(requireContext()));
         placeInput.setAdapter(adapter);
+        placeInput.setTokenizer(new MultiAutoCompleteTextView.CommaTokenizer());
     }
 
     private void generateRoutes() {
