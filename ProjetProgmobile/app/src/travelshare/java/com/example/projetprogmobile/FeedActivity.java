@@ -11,6 +11,7 @@ import android.os.Looper;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
+import android.widget.ImageButton;
 import android.widget.SearchView;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -46,6 +47,7 @@ public class FeedActivity extends AppCompatActivity {
     private Button authButton;
     private Button placeModeButton;
     private SearchView searchView;
+    private ImageButton profileButton;
     private TextView authStatusView;
     private TextView feedStatusView;
     private TextView searchSummaryView;
@@ -88,6 +90,7 @@ public class FeedActivity extends AppCompatActivity {
 
         placeModeButton = findViewById(R.id.place_mode_button);
         searchView = findViewById(R.id.search_view);
+        profileButton = findViewById(R.id.profile_button);
         authStatusView = findViewById(R.id.auth_status_text);
         feedStatusView = findViewById(R.id.feed_status_text);
         searchSummaryView = findViewById(R.id.search_summary_text);
@@ -99,6 +102,9 @@ public class FeedActivity extends AppCompatActivity {
         authButton.setOnClickListener(v -> {
             startActivity(FeatureNavigation.createLoginIntent(this, FeatureNavigation.DESTINATION_TRAVEL_SHARE));
         });
+
+        profileButton.setOnClickListener(v -> startActivity(
+                ProfileActivity.createIntent(this, FeatureNavigation.DESTINATION_TRAVEL_SHARE)));
 
         uploadButton.setOnClickListener(v -> {
             if (auth.getCurrentUser() == null) {
@@ -122,6 +128,7 @@ public class FeedActivity extends AppCompatActivity {
     protected void onResume() {
         super.onResume();
         updateAuthenticationUi();
+        refreshProfileAvatar();
     }
 
     @Override
@@ -181,6 +188,10 @@ public class FeedActivity extends AppCompatActivity {
         adapter.notifyDataSetChanged();
 
         authButton.setVisibility(isAuthenticated ? View.GONE : View.VISIBLE);
+        profileButton.setVisibility(isAuthenticated ? View.VISIBLE : View.GONE);
+        if (!isAuthenticated) {
+            ProfileAvatarUtils.applyAvatar(profileButton, null, 8);
+        }
         authStatusView.setText(isAuthenticated
                 ? R.string.travelshare_feed_signed_in
                 : R.string.travelshare_feed_guest_hint);
@@ -188,6 +199,22 @@ public class FeedActivity extends AppCompatActivity {
                 ? R.string.travelshare_publish
                 : R.string.travelshare_publish_locked);
         uploadButton.setAlpha(isAuthenticated ? 1f : 0.7f);
+    }
+
+    private void refreshProfileAvatar() {
+        if (auth.getCurrentUser() == null || auth.getUid() == null) {
+            ProfileAvatarUtils.applyAvatar(profileButton, null, 8);
+            return;
+        }
+
+        db.collection("users")
+                .document(auth.getUid())
+                .get()
+                .addOnSuccessListener(documentSnapshot -> ProfileAvatarUtils.applyAvatar(
+                        profileButton,
+                        documentSnapshot.getString("avatarBase64"),
+                        8))
+                .addOnFailureListener(error -> ProfileAvatarUtils.applyAvatar(profileButton, null, 8));
     }
 
     private void configureSearch() {

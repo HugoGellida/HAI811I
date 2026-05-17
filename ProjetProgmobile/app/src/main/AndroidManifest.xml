@@ -34,6 +34,7 @@
         <activity
             android:name="com.example.travelpath.MapActivity"
             android:theme="@style/Theme.ProjetProgMobile" />
+        <activity android:name=".ProfileActivity" />
         <activity android:name=".LoginActivity" />
         <activity android:name=".FeedActivity"/>
         <activity android:name=".RegisterActivity" />

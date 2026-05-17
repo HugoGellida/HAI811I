@@ -58,6 +58,8 @@ public class PhotoAdapter extends RecyclerView.Adapter<PhotoAdapter.ViewHolder> 
         Photo photo = photoList.get(position);
 
         if (photo == null) {
+            ProfileAvatarUtils.applyAvatar(holder.authorAvatarView, null, 8);
+            holder.authorNameView.setText("Voyageur");
             holder.imageView.setImageResource(android.R.drawable.ic_menu_report_image);
             holder.description.setText("");
             holder.deleteButton.setVisibility(View.GONE);
@@ -65,6 +67,9 @@ public class PhotoAdapter extends RecyclerView.Adapter<PhotoAdapter.ViewHolder> 
             holder.locationView.setVisibility(View.GONE);
             return;
         }
+
+        holder.authorNameView.setText(photo.getDisplayAuthorName());
+        ProfileAvatarUtils.applyAvatar(holder.authorAvatarView, photo.getAuthorAvatarBase64(), 8);
 
         holder.description.setText(photo.getDescription() != null ? photo.getDescription() : "");
 
@@ -133,6 +138,8 @@ public class PhotoAdapter extends RecyclerView.Adapter<PhotoAdapter.ViewHolder> 
     public static class ViewHolder extends RecyclerView.ViewHolder {
 
         ImageView imageView;
+        ImageView authorAvatarView;
+        TextView authorNameView;
         TextView description;
         TextView keywordsView;
         TextView locationView;
@@ -142,6 +149,8 @@ public class PhotoAdapter extends RecyclerView.Adapter<PhotoAdapter.ViewHolder> 
             super(itemView);
 
             imageView = itemView.findViewById(R.id.imageView);
+            authorAvatarView = itemView.findViewById(R.id.author_avatar_view);
+            authorNameView = itemView.findViewById(R.id.author_name_text);
             description = itemView.findViewById(R.id.description);
             keywordsView = itemView.findViewById(R.id.keywords_text);
             locationView = itemView.findViewById(R.id.location_text);

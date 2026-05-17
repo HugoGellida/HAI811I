@@ -16,16 +16,14 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.travelpath.MapActivity;
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.FirebaseFirestore;
-import com.google.firebase.storage.FirebaseStorage;
-import com.google.firebase.storage.StorageReference;
 
 import java.io.ByteArrayOutputStream;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.UUID;
 
 public class UploadActivity extends AppCompatActivity {
 
@@ -41,8 +39,9 @@ public class UploadActivity extends AppCompatActivity {
     private double selectedLongitude;
     private String selectedLocationName;
 
-    private FirebaseStorage storage;
     private FirebaseFirestore db;
+    private String currentAuthorDisplayName;
+    private String currentAuthorAvatarBase64;
 
     private static final int PICK_IMAGE = 1;
     private static final int PICK_LOCATION = 2;
@@ -68,8 +67,8 @@ public class UploadActivity extends AppCompatActivity {
         keywordsInput = findViewById(R.id.keywordsInput);
         locationValue = findViewById(R.id.locationValue);
 
-        storage = FirebaseStorage.getInstance();
         db = FirebaseFirestore.getInstance();
+        loadCurrentAuthorProfile();
 
         selectBtn.setOnClickListener(v -> selectImage());
         selectLocationBtn.setOnClickListener(v -> openLocationPicker());
@@ -177,6 +176,8 @@ public class UploadActivity extends AppCompatActivity {
                 desc,
                 FirebaseAuth.getInstance().getUid()
         );
+        photo.setAuthorDisplayName(resolveCurrentAuthorDisplayName());
+        photo.setAuthorAvatarBase64(currentAuthorAvatarBase64);
 
         if (selectedLocationName != null && !selectedLocationName.trim().isEmpty()) {
             photo.setLatitude(selectedLatitude);
@@ -215,5 +216,39 @@ public class UploadActivity extends AppCompatActivity {
         }
 
         return new ArrayList<>(uniqueKeywords);
+    }
+
+    private void loadCurrentAuthorProfile() {
+        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+        if (user == null || user.getUid() == null) {
+            return;
+        }
+
+        currentAuthorDisplayName = user.getDisplayName();
+
+        db.collection("users")
+                .document(user.getUid())
+                .get()
+                .addOnSuccessListener(documentSnapshot -> {
+                    String displayName = documentSnapshot.getString("displayName");
+                    if (displayName != null && !displayName.trim().isEmpty()) {
+                        currentAuthorDisplayName = displayName.trim();
+                    }
+
+                    currentAuthorAvatarBase64 = documentSnapshot.getString("avatarBase64");
+                });
+    }
+
+    private String resolveCurrentAuthorDisplayName() {
+        if (currentAuthorDisplayName != null && !currentAuthorDisplayName.trim().isEmpty()) {
+            return currentAuthorDisplayName.trim();
+        }
+
+        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+        if (user != null && user.getDisplayName() != null && !user.getDisplayName().trim().isEmpty()) {
+            return user.getDisplayName().trim();
+        }
+
+        return "Voyageur";
     }
 }

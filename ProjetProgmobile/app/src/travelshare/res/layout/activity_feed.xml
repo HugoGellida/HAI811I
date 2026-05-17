@@ -49,6 +49,18 @@
             android:gravity="end"
             android:orientation="horizontal">
 
+            <ImageButton
+                android:id="@+id/profile_button"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:layout_marginEnd="12dp"
+                android:background="@drawable/bg_profile_bubble"
+                android:contentDescription="@string/profile_button_content_description"
+                android:padding="8dp"
+                android:scaleType="centerInside"
+                android:src="@drawable/ic_profile_placeholder"
+                android:visibility="gone" />
+
             <Button
                 android:id="@+id/auth_button"
                 android:layout_width="wrap_content"

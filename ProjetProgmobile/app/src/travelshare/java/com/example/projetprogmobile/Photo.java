@@ -9,6 +9,8 @@ public class Photo {
     private String imageBase64;
     private String description;
     private String userId;
+    private String authorDisplayName;
+    private String authorAvatarBase64;
     private String locationName;
     private List<String> keywords;
     private double latitude;
@@ -57,6 +59,22 @@ public class Photo {
 
     public void setUserId(String userId) {
         this.userId = userId;
+    }
+
+    public String getAuthorDisplayName() {
+        return authorDisplayName;
+    }
+
+    public void setAuthorDisplayName(String authorDisplayName) {
+        this.authorDisplayName = authorDisplayName;
+    }
+
+    public String getAuthorAvatarBase64() {
+        return authorAvatarBase64;
+    }
+
+    public void setAuthorAvatarBase64(String authorAvatarBase64) {
+        this.authorAvatarBase64 = authorAvatarBase64;
     }
 
     public String getLocationName() {
@@ -158,6 +176,18 @@ public class Photo {
         return builder.toString();
     }
 
+    public String getDisplayAuthorName() {
+        if (authorDisplayName != null && !authorDisplayName.trim().isEmpty()) {
+            return authorDisplayName.trim();
+        }
+
+        return "Voyageur";
+    }
+
+    public boolean hasAuthorAvatar() {
+        return authorAvatarBase64 != null && !authorAvatarBase64.trim().isEmpty();
+    }
+
     public boolean matchesTextQuery(String query) {
         String normalizedQuery = normalize(query);
         if (normalizedQuery.isEmpty()) {
@@ -169,6 +199,10 @@ public class Photo {
         }
 
         if (normalize(locationName).contains(normalizedQuery)) {
+            return true;
+        }
+
+        if (normalize(authorDisplayName).contains(normalizedQuery)) {
             return true;
         }
 
